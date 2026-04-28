@@ -1,0 +1,66 @@
+[PrefixDeclaration]
+:		http://example.org/
+ex:		http://example.org/ontology#
+xsd:	http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+# ✅ BENAR - tidak ada error
+mappingId   penduduk-ok
+target      ex:penduduk/{nik} a ex:Penduduk ;
+              ex:nama {nama}^^xsd:string ;
+              ex:pekerjaan {pekerjaan}^^xsd:string .
+source      SELECT nik, nama, pekerjaan
+            FROM vm_penduduk.v_penduduk
+
+# ❌ A1 - Typo nama view (v_pendudukk dengan double k)
+mappingId   penduduk-a1
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM vm_penduduk.v_pendudukk
+
+# ❌ A2 - Nama model salah (penduduk harusnya vm_penduduk)
+mappingId   penduduk-a2
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM penduduk.v_penduduk
+
+# ❌ A4 - Tanpa prefix model (Warning)
+mappingId   penduduk-a4
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM v_penduduk
+
+# ❌ B1 - Kolom tidak diekspos oleh view (ada di tabel fisik tapi tidak di-SELECT di vdb.xml)
+mappingId   penduduk-b1
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik, alamat
+            FROM vm_penduduk.v_penduduk
+
+# ❌ B3 - Kolom sama sekali tidak ada (bukan di view maupun tabel fisik)
+#         Tanpa koneksi DB tampil sebagai B1; dengan koneksi DB (Category C) dikonfirmasi B3
+mappingId   penduduk-b3
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik, skor_kredit
+            FROM vm_penduduk.v_penduduk
+
+# ❌ B2 - Typo nama kolom (status_eligble harusnya status_eligible)
+mappingId   eligibility-b2
+target      ex:e/{eligibility_id} a ex:Eligibility .
+source      SELECT eligibility_id, status_eligble
+            FROM vm_eligibility.v_eligibility
+
+# ❌ B4 - Pakai nama asli bukan alias (nama_program harusnya program_name)
+mappingId   program-b4
+target      ex:program/{program_id} a ex:Program .
+source      SELECT program_id, nama_program
+            FROM vm_program_bansos.v_program_bansos
+
+# ❌ B5 - Placeholder {no_kk} di target tapi tidak di SELECT
+mappingId   penduduk-b5
+target      ex:penduduk/{nik} a ex:Penduduk ;
+              ex:noKK {no_kk}^^xsd:string .
+source      SELECT nik, nama
+            FROM vm_penduduk.v_penduduk
+
+]]

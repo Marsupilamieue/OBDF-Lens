@@ -1,26 +1,67 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { DiagnosticsProvider } from './providers/diagnosticsProvider';
+import { CodeActionProvider } from './providers/codeActionProvider';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  console.log('OBDF Lens is now active!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "obdf-lens" is now active!');
+  const diagnosticsProvider = new DiagnosticsProvider(context);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('obdf-lens.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from OBDF Lens!');
-	});
+  // Register code action provider for .obda and vdb.xml
+  const codeActionDisposable = vscode.languages.registerCodeActionsProvider(
+    [
+      { language: 'obda' },
+      { language: 'xml', pattern: '**/vdb.xml' },
+    ],
+    new CodeActionProvider(),
+    { providedCodeActionKinds: CodeActionProvider.providedCodeActionKinds }
+  );
+  context.subscriptions.push(codeActionDisposable);
 
-	context.subscriptions.push(disposable);
+  // Watch .obda files
+  const obdaWatcher = vscode.workspace.createFileSystemWatcher('**/*.obda');
+  obdaWatcher.onDidChange(uri => diagnosticsProvider.validateObda(uri));
+  obdaWatcher.onDidCreate(uri => diagnosticsProvider.validateObda(uri));
+  obdaWatcher.onDidDelete(uri => diagnosticsProvider.clearAll());
+  context.subscriptions.push(obdaWatcher);
+
+  // Watch vdb.xml
+  const vdbWatcher = vscode.workspace.createFileSystemWatcher('**/vdb.xml');
+  vdbWatcher.onDidChange(uri => diagnosticsProvider.validateVdb(uri));
+  vdbWatcher.onDidCreate(uri => diagnosticsProvider.validateVdb(uri));
+  context.subscriptions.push(vdbWatcher);
+
+  // Re-validate on open
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(doc => {
+      if (doc.fileName.endsWith('.obda')) {
+        diagnosticsProvider.validateObda(doc.uri);
+      } else if (doc.fileName.endsWith('vdb.xml')) {
+        diagnosticsProvider.validateVdb(doc.uri);
+      }
+    })
+  );
+
+  // Re-validate on save
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      if (doc.fileName.endsWith('.obda')) {
+        diagnosticsProvider.validateObda(doc.uri);
+      } else if (doc.fileName.endsWith('vdb.xml')) {
+        diagnosticsProvider.validateVdb(doc.uri);
+      }
+    })
+  );
+
+  // Manual re-validate command
+  const validateCmd = vscode.commands.registerCommand('obdf-lens.validate', async () => {
+    await diagnosticsProvider.validateAll();
+    vscode.window.showInformationMessage('OBDF Lens: Validasi selesai.');
+  });
+  context.subscriptions.push(validateCmd);
+
+  // Run on startup
+  diagnosticsProvider.validateAll();
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

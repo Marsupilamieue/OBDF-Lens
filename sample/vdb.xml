@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="bansos-vdb" version="1">
+
+  <!-- Physical source -->
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- Virtual model: penduduk -->
+  <model name="vm_penduduk" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_penduduk AS
+        SELECT nik, nama, tanggal_lahir, pekerjaan, penghasilan
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- Virtual model: eligibility -->
+  <model name="vm_eligibility" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_eligibility AS
+        SELECT eligibility_id, program_id, nik,
+               status_eligible, validated_at, validated_by
+        FROM bansos_db.eligibility;
+    ]]></metadata>
+  </model>
+
+  <!-- Virtual model: program bansos -->
+  <model name="vm_program_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_program_bansos AS
+        SELECT program_id,
+               nama_program AS program_name,
+               CAST(nominal AS BIGINT) AS nominal
+        FROM bansos_db.master_program_bansos;
+    ]]></metadata>
+  </model>
+
+
+  <!-- ❌ C2 - Tabel 'master_penerima' tidak ada di database -->
+  <model name="vm_penerima" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_penerima AS
+        SELECT penerima_id, nik, nama_penerima
+        FROM bansos_db.master_penerima;
+    ]]></metadata>
+  </model>
+
+  <!-- ❌ C3 - Kolom 'kode_pos' tidak ada di tabel master_penduduk -->
+  <model name="vm_penduduk_detail" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_penduduk_detail AS
+        SELECT nik, nama, kode_pos
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- ❌ C4 - JOIN ON menggunakan kolom yang salah (nik_id tidak ada, harusnya nik) -->
+  <model name="vm_keluarga" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_keluarga AS
+        SELECT k.no_kk, k.alamat, p.nama
+        FROM bansos_db.master_keluarga k
+        JOIN bansos_db.master_penduduk p ON k.no_kk = p.nik_id;
+    ]]></metadata>
+  </model>
+
+</vdb>
