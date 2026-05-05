@@ -2,11 +2,7 @@ import * as vscode from 'vscode';
 import { VdbData, VdbView, ObdfDiagnosticData, QuickFix } from '../types';
 import { findClosest } from '../utils/similarity';
 
-/**
- * Find the range of an identifier (whole-word) within view.ddl.
- * startFrom: char offset in view.ddl to begin searching (default 0).
- * Falls back to the full viewLine if not found.
- */
+// Find the range of an identifier (whole-word) within view.ddl.
 function findInDdl(view: VdbView, identifier: string, startFrom: number = 0): vscode.Range {
   const regex = new RegExp(`\\b${identifier}\\b`, 'i');
   const match = view.ddl.slice(startFrom).match(regex);
@@ -40,19 +36,18 @@ export interface DbConnectionConfig {
   password: string;
 }
 
-/** Query physical DB metadata using pg */
+// Query DB
 async function queryDbMeta(
   config: DbConnectionConfig,
   query: string,
   params: string[]
 ): Promise<string[]> {
-  // Dynamically require pg so that extension loads even if pg isn't installed
   let pg: typeof import('pg');
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     pg = require('pg');
   } catch {
-    throw new Error('Package "pg" tidak ditemukan. Jalankan: npm install pg');
+    throw new Error('Package not found');
   }
 
   const client = new pg.Client(config);
@@ -69,10 +64,7 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
-/**
- * Category C: Validate vdb.xml virtual view DDL against physical database.
- * Requires configured DB connections in settings.
- */
+// Category C: Validate vdb.xml virtual view DDL against physical database.
 export async function validateCategoryC(
   vdbData: VdbData,
   vdbUri: string
@@ -82,15 +74,16 @@ export async function validateCategoryC(
   const connections = config.get<Record<string, DbConnectionConfig>>('connections') ?? {};
 
   if (Object.keys(connections).length === 0) {
-    return diagnostics;  // No connections configured, skip Category C
+    return diagnostics; 
   }
 
-  // Cache of fetched tables/columns to avoid redundant queries
-  const tableCache: Record<string, string[]> = {};   // sourceName → table list
-  const columnCache: Record<string, string[]> = {};  // sourceName.tableName → column list
+  const tableCache: Record<string, string[]> = {};   
+  const columnCache: Record<string, string[]> = {};  
 
   async function getTables(sourceName: string, connConfig: DbConnectionConfig): Promise<string[]> {
-    if (tableCache[sourceName]) { return tableCache[sourceName]; }
+    if (tableCache[sourceName]) { 
+      return tableCache[sourceName]; 
+    }
     try {
       const tables = await queryDbMeta(
         connConfig,
@@ -122,10 +115,14 @@ export async function validateCategoryC(
 
   for (const model of vdbData.models) {
     for (const view of model.views) {
-      if (!view.sourceName || !view.tableName) { continue; }
+      if (!view.sourceName || !view.tableName) { 
+        continue; 
+      }
 
       const connConfig = connections[view.sourceName];
-      if (!connConfig) { continue; }  // No connection for this source, skip
+      if (!connConfig) { 
+        continue; 
+      }  
 
       const range = new vscode.Range(view.viewLine, 0, view.viewLine, 200);
 
@@ -134,7 +131,10 @@ export async function validateCategoryC(
       try {
         tables = await getTables(view.sourceName, connConfig);
       } catch (err) {
-        const data: ObdfDiagnosticData = { code: 'C1', fixes: [] };
+        const data: ObdfDiagnosticData = { 
+          code: 'C1', 
+          fixes: [] 
+        };
         const knownSources = Object.keys(connections);
         const closest = findClosest(view.sourceName, knownSources);
         let msg = `[C1] Source '${view.sourceName}' tidak bisa dikoneksi\n`;
@@ -152,14 +152,17 @@ export async function validateCategoryC(
       }
 
       // C2: Check table exists in DB
-      const tableExists = tables.some(t => t.toLowerCase() === view.tableName.toLowerCase());
+      const tableExists = tables.some(t => 
+        t.toLowerCase() === view.tableName.toLowerCase()
+      );
+
       if (!tableExists) {
         const closest = findClosest(view.tableName, tables);
         const data: ObdfDiagnosticData = {
           code: 'C2',
           fixes: closest ? [{
             title: `Ganti dengan '${closest.match}'`,
-            edits: [], // vdb.xml edit - complex, needs DDL replacement
+            edits: [], 
           }] : [],
         };
 
@@ -170,7 +173,7 @@ export async function validateCategoryC(
         }
         msg += `Tabel yang tersedia di ${view.sourceName}:\n`;
         msg += tables.map(t => t === closest?.match
-          ? `  • ${t}   ← paling mirip`
+          ? `  • ${t}   <- paling mirip`
           : `  • ${t}`
         ).join('\n');
 
@@ -184,18 +187,20 @@ export async function validateCategoryC(
         continue;
       }
 
-      // Table exists - check columns (C3 & C4)
       const dbColumns = await getColumns(view.sourceName, view.tableName, connConfig);
-      if (dbColumns.length === 0) { continue; }
+      if (dbColumns.length === 0) { 
+        continue; 
+      }
 
       // C3: Check SELECT columns exist in physical table
       for (const col of view.exposedColumns) {
-        // Reverse-map alias to raw column name
         const rawCol = Object.entries(view.aliasMap).find(([, alias]) =>
           alias.toLowerCase() === col.toLowerCase()
         )?.[0] ?? col;
 
-        if (rawCol === '*') { continue; }
+        if (rawCol === '*') { 
+          continue; 
+        }
 
         const exists = dbColumns.some(c => c.toLowerCase() === rawCol.toLowerCase());
         if (!exists) {
@@ -215,7 +220,7 @@ export async function validateCategoryC(
           }
           msg += `Kolom yang tersedia di '${view.tableName}':\n`;
           msg += dbColumns.map(c => c === closest?.match
-            ? `  • ${c}   ← paling mirip dengan '${rawCol}'`
+            ? `  • ${c}   <- paling mirip dengan '${rawCol}'`
             : `  • ${c}`
           ).join('\n');
 
@@ -239,7 +244,6 @@ export async function validateCategoryC(
         const leftCol = jm[1];
         const rightCol = jm[2];
 
-        // Check right-side column (the one referencing this table in the ON clause)
         for (const joinCol of [leftCol, rightCol]) {
           const exists = dbColumns.some(c => c.toLowerCase() === joinCol.toLowerCase());
           if (!exists) {
@@ -247,7 +251,7 @@ export async function validateCategoryC(
             const data: ObdfDiagnosticData = {
               code: 'C4',
               fixes: closest ? [{
-                title: `Ganti '${joinCol}' → '${closest.match}' di JOIN condition`,
+                title: `Ganti '${joinCol}' -> '${closest.match}' di JOIN condition`,
                 edits: [],
               }] : [],
             };

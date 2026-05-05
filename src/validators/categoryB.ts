@@ -138,8 +138,7 @@ export function validateCategoryB(
         continue;
       }
 
-      // B1/B3: Column not in view at all - we can't distinguish B1 vs B3 without DB access
-      // Report as B1 (column might be in physical table but not in view)
+      // B1 (column not in view)
       const data: ObdfDiagnosticData = {
         code: 'B1',
         fixes: [
@@ -167,7 +166,7 @@ export function validateCategoryB(
   return diagnostics;
 }
 
-/** Find the line and character position of a column name in the source query text */
+// Find the line and character position of a column name in the source query text 
 function findColumnLine(
   sourceQuery: string,
   col: string,
@@ -176,7 +175,6 @@ function findColumnLine(
 ): { line: number; startChar: number; endChar: number } {
   const lines = sourceQuery.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    // Match column name as whole word
     const regex = new RegExp(`\\b${col}\\b`, 'i');
     const match = lines[i].match(regex);
     if (match && match.index !== undefined) {
