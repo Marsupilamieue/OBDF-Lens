@@ -12,14 +12,20 @@ export class CodeActionProvider implements vscode.CodeActionProvider {
     const actions: vscode.CodeAction[] = [];
 
     for (const diagnostic of context.diagnostics) {
-      if (diagnostic.source !== 'OBDF Lens') { continue; }
+      if (diagnostic.source !== 'OBDF Lens') { 
+        continue; 
+      }
 
       const data = (diagnostic as any).data as ObdfDiagnosticData | undefined;
-      if (!data?.fixes?.length) { continue; }
+      if (!data?.fixes?.length) { 
+        continue; 
+      }
 
       for (const fix of data.fixes) {
         const action = this.createAction(fix, diagnostic);
-        if (action) { actions.push(action); }
+        if (action) { 
+          actions.push(action); 
+        }
       }
     }
 
@@ -27,7 +33,9 @@ export class CodeActionProvider implements vscode.CodeActionProvider {
   }
 
   private createAction(fix: QuickFix, diagnostic: vscode.Diagnostic): vscode.CodeAction | undefined {
-    if (!fix.edits.length) { return undefined; }
+    if (!fix.edits.length) { 
+      return undefined; 
+    }
 
     const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
     action.diagnostics = [diagnostic];
