@@ -6,10 +6,7 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
-/**
- * Category A: Validate .obda FROM references against vdb.xml models/views.
- * Returns diagnostics on the .obda document.
- */
+// Category A: Validate .obda FROM references against vdb.xml models/views.
 export function validateCategoryA(
   mappings: ObdaMapping[],
   vdbData: VdbData,
@@ -17,17 +14,21 @@ export function validateCategoryA(
   vdbUri: string
 ): vscode.Diagnostic[] {
   const diagnostics: vscode.Diagnostic[] = [];
-
   const allModelNames = vdbData.models.map(m => m.name);
   const allViewsByModel: Record<string, string[]> = {};
+
   for (const m of vdbData.models) {
     allViewsByModel[m.name] = m.views.map(v => v.name);
   }
-  // Flat list of all views across all models
-  const allViews = vdbData.models.flatMap(m => m.views.map(v => ({ model: m.name, view: v.name })));
+
+  const allViews = vdbData.models.flatMap(m => m.views.map(v => ({ 
+    model: m.name, view: v.name })
+  ));
 
   for (const mapping of mappings) {
-    if (!mapping.fromRaw) { continue; }
+    if (!mapping.fromRaw) { 
+      continue;
+    }
 
     const range = new vscode.Range(
       mapping.fromLine, mapping.fromStartChar,
@@ -36,7 +37,9 @@ export function validateCategoryA(
 
     // A4: No model prefix (just view name)
     if (!mapping.fromModel) {
-      const match = allViews.find(v => v.view.toLowerCase() === mapping.fromView.toLowerCase());
+      const match = allViews.find(v => 
+        v.view.toLowerCase() === mapping.fromView.toLowerCase()
+      );
       const data: ObdfDiagnosticData = { code: 'A4', fixes: [] };
 
       if (match) {
@@ -75,7 +78,10 @@ export function validateCategoryA(
     }
 
     // Check model exists
-    const modelMatch = vdbData.models.find(m => m.name.toLowerCase() === mapping.fromModel.toLowerCase());
+    const modelMatch = vdbData.models.find(m => 
+      m.name.toLowerCase() === mapping.fromModel.toLowerCase()
+    );
+
     if (!modelMatch) {
       // A2: Model name wrong
       const closest = findClosest(mapping.fromModel, allModelNames);
@@ -108,7 +114,10 @@ export function validateCategoryA(
     }
 
     // Model found - check view exists
-    const viewMatch = modelMatch.views.find(v => v.name.toLowerCase() === mapping.fromView.toLowerCase());
+    const viewMatch = modelMatch.views.find(v => 
+      v.name.toLowerCase() === mapping.fromView.toLowerCase()
+    );
+
     if (!viewMatch) {
       const viewNames = modelMatch.views.map(v => v.name);
       const closest = findClosest(mapping.fromView, viewNames);
@@ -119,7 +128,7 @@ export function validateCategoryA(
       let severity: vscode.DiagnosticSeverity;
 
       if (viewNames.length === 0) {
-        // A3: No views at all in the model - probably not created yet
+        // A3: No views at all in the model
         code = 'A3';
         msg = `[A3] View '${mapping.fromRaw}' tidak ditemukan di vdb.xml\nSeperti view ini belum didefinisikan sama sekali.\n`;
         msg += `\nSuggestion: Tambahkan virtual model berikut ke vdb.xml:\n`;
