@@ -1,4 +1,65 @@
+import { XMLParser } from 'fast-xml-parser';
 import { VdbData, VdbModel, VdbSource, VdbView } from '../types';
+
+const CDATA_BEGIN = '<![CDATA[';
+
+const vdbXmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  parseTagValue: false,
+  trimValues: true,
+  ignoreDeclaration: true,
+  allowBooleanAttributes: true,
+  unpairedTags: ['source'],
+  captureMetaData: true,
+});
+
+const xmlMeta = XMLParser.getMetaDataSymbol();
+
+function asArray<T>(x: T | T[] | undefined): T[] {
+  if (x === undefined) { 
+    return []; 
+  }
+  return Array.isArray(x) ? x : [x];
+}
+
+/** 0-based line and column, matching vscode.Position. */
+function posAt(xml: string, index: number): { line: number; col: number } {
+  if (index <= 0) { 
+    return { line: 0, col: 0 }; 
+  }
+  let line = 0;
+  let lineStart = 0;
+  for (let i = 0; i < index && i < xml.length; i++) {
+    if (xml[i] === '\n') {
+      line++;
+      lineStart = i + 1;
+    }
+  }
+  return { line, col: index - lineStart };
+}
+
+function nodeStartIndex(node: unknown): number | undefined {
+  if (!node || typeof node !== 'object') {
+    return undefined;
+  }
+  const m = (node as Record<PropertyKey, unknown>)[xmlMeta as unknown as PropertyKey] as { startIndex?: number } | undefined;
+  return typeof m?.startIndex === 'number' ? m.startIndex : undefined;
+}
+
+/** DDL inside <![CDATA[...]]>; null if malformed. */
+function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodyStartAbs: number } | null {
+  const open = xml.indexOf(CDATA_BEGIN, searchFrom);
+  if (open === -1) { 
+    return null; 
+  }
+  const bodyStartAbs = open + CDATA_BEGIN.length;
+  const close = xml.indexOf(']]>', bodyStartAbs);
+  if (close === -1) { 
+    return null; 
+  }
+  return { ddl: xml.slice(bodyStartAbs, close), bodyStartAbs };
+}
 
 // ambil kolom dari sql select
 export function parseSelectColumns(
@@ -86,112 +147,107 @@ function extractSelectClause(ddl: string): string {
   return normalized.slice(selectIdx + 6, fromIdx).trim();
 }
 
+function parseViewsFromDdl(
+  ddl: string,
+  fullXml: string,
+  cdataBodyStartAbs: number
+): VdbView[] {
+  const views: VdbView[] = [];
+  const createViewRegex = /CREATE\s+VIEW\s+(\w+)\s+AS\s+([\s\S]+?)(?=CREATE\s+VIEW\s+|\s*$)/gi;
+  let viewMatch: RegExpExecArray | null;
+  while ((viewMatch = createViewRegex.exec(ddl)) !== null) {
+    const viewName = viewMatch[1];
+    const viewBody = viewMatch[2];
+    const viewBodyWithSelect = /^\s*SELECT\b/i.test(viewBody)
+      ? viewBody
+      : 'SELECT ' + viewBody;
+    const selectClause = extractSelectClause(viewBodyWithSelect);
+    const { exposedColumns, aliasMap } = parseSelectColumns(selectClause);
+    const { sourceName, tableName } = parseViewFromClause(viewBody);
+
+    const absViewStart = cdataBodyStartAbs + viewMatch.index;
+    const { line: viewLine, col: viewDdlStartChar } = posAt(fullXml, absViewStart);
+
+    views.push({
+      name: viewName,
+      exposedColumns,
+      aliasMap,
+      sourceName,
+      tableName,
+      ddl: viewMatch[0],
+      viewLine,
+      viewDdlStartChar,
+    });
+  }
+  return views;
+}
+
 // Parse vdb.xml text and return structured VdbData.
 export function parseVdb(text: string): VdbData {
-  const lines = text.split('\n');
   const models: VdbModel[] = [];
   const sources: VdbSource[] = [];
 
-  // Parse physical sources: <source name="X" translator-name="Y" connection-jndi-name="Z"/>
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const srcMatch = line.match(/<source\s[^>]*name="([^"]+)"[^>]*translator-name="([^"]+)"/i);
-    if (srcMatch) {
-      sources.push({
-        name: srcMatch[1],
-        translatorName: srcMatch[2],
-        line: i,
-      });
-    }
+  let root: { vdb?: unknown };
+  try {
+    root = vdbXmlParser.parse(text) as { vdb?: unknown };
+  } catch {
+    return { models, sources };
   }
 
-  // Parse virtual models: <model name="X" type="VIRTUAL">
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const modelMatch = line.match(/<model\s[^>]*name="([^"]+)"[^>]*type="VIRTUAL"/i)
-      || line.match(/<model\s[^>]*type="VIRTUAL"[^>]*name="([^"]+)"/i);
-    if (!modelMatch) { 
+  const vdb = root.vdb;
+  if (!vdb || typeof vdb !== 'object') {
+    return { models, sources };
+  }
+
+  for (const model of asArray((vdb as Record<string, unknown>).model as Record<string, unknown> | Record<string, unknown>[] | undefined)) {
+    if (!model || typeof model !== 'object') { 
       continue; 
     }
 
-    const modelName = modelMatch[1];
-    const modelLine = i;
-    const views: VdbView[] = [];
+    const type = String(model['@_type'] ?? '');
+    const name = String(model['@_name'] ?? '');
 
-    // cari </model>
-    let modelEndLine = lines.length - 1;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (lines[j].includes('</model>')) { 
-        modelEndLine = j; 
-        break; 
+    if (type === 'PHYSICAL') {
+      for (const src of asArray(model.source as Record<string, unknown> | Record<string, unknown>[] | undefined)) {
+        if (!src || typeof src !== 'object') { 
+          continue; 
+        }
+        const srcName = String(src['@_name'] ?? '');
+        const translatorName = String(src['@_translator-name'] ?? '');
+        const start = nodeStartIndex(src);
+        const line = start !== undefined ? posAt(text, start).line : 0;
+        sources.push({ name: srcName, translatorName, line });
       }
+      continue;
     }
 
-    // cari vdata model
-    let j = i + 1;
-    while (j <= modelEndLine) {
-      const cdataStart = lines[j].indexOf('<![CDATA[');
-      if (cdataStart !== -1) {
+    if (type === 'VIRTUAL') {
+      const modelLine = (() => {
+        const s = nodeStartIndex(model);
+        return s !== undefined ? posAt(text, s).line : 0;
+      })();
 
-        // ambil ddl sampe ]]>
-        let ddl = lines[j].slice(cdataStart + 9);
-        let cdataLine = j;
-        let cdataEndLine = j;
-        if (!ddl.includes(']]>')) {
-          j++;
-          while (j <= modelEndLine) {
-            const endIdx = lines[j].indexOf(']]>');
-            if (endIdx !== -1) {
-              ddl += '\n' + lines[j].slice(0, endIdx);
-              cdataEndLine = j;
-              break;
-            }
-            ddl += '\n' + lines[j];
-            j++;
-          }
-        } else {
-          const endIdx = ddl.indexOf(']]>');
-          ddl = ddl.slice(0, endIdx);
-          cdataEndLine = j;
+      const views: VdbView[] = [];
+      for (const md of asArray(model.metadata as Record<string, unknown> | Record<string, unknown>[] | undefined)) {
+        if (!md || typeof md !== 'object') { 
+          continue; 
         }
-
-        // create view
-        const createViewRegex = /CREATE\s+VIEW\s+(\w+)\s+AS\s+([\s\S]+?)(?=CREATE\s+VIEW\s+|\s*$)/gi;
-        let viewMatch: RegExpExecArray | null;
-        while ((viewMatch = createViewRegex.exec(ddl)) !== null) {
-          const viewName = viewMatch[1];
-          const viewBody = viewMatch[2];
-          const viewBodyWithSelect = /^\s*SELECT\b/i.test(viewBody)
-            ? viewBody
-            : 'SELECT ' + viewBody;
-          const selectClause = extractSelectClause(viewBodyWithSelect);
-          const { exposedColumns, aliasMap } = parseSelectColumns(selectClause);
-          const { sourceName, tableName } = parseViewFromClause(viewBody);
-          
-          const viewLineInDdl = ddl.slice(0, viewMatch.index).split('\n').length - 1;
-          const viewLine = cdataLine + viewLineInDdl;
-          const lastLineBeforeView = ddl.slice(0, viewMatch.index).split('\n').pop() ?? '';
-          const viewDdlStartChar = viewLineInDdl === 0
-            ? (cdataStart + 9) + lastLineBeforeView.length
-            : lastLineBeforeView.length;
-
-          views.push({
-            name: viewName,
-            exposedColumns,
-            aliasMap,
-            sourceName,
-            tableName,
-            ddl: viewMatch[0],
-            viewLine,
-            viewDdlStartChar,
-          });
+        if (String(md['@_type'] ?? '') !== 'DDL') { 
+          continue; 
         }
+        const mdStart = nodeStartIndex(md);
+        if (mdStart === undefined) { 
+          continue; 
+        }
+        const extracted = cdataSliceAfter(text, mdStart);
+        if (!extracted) { 
+          continue; 
+        }
+        views.push(...parseViewsFromDdl(extracted.ddl, text, extracted.bodyStartAbs));
       }
-      j++;
-    }
 
-    models.push({ name: modelName, views, modelLine });
-    i = modelEndLine;
+      models.push({ name, views, modelLine });
+    }
   }
 
   return { models, sources };
