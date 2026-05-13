@@ -17,6 +17,12 @@
     ]]></metadata>
   </model>
 
+  <model name="vm_penduduk_kosong" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+
+    ]]></metadata>
+  </model>
+
   <!--model eligibility -->
   <model name="vm_eligibility" type="VIRTUAL">
     <metadata type="DDL"><![CDATA[
@@ -37,7 +43,6 @@
         FROM bansos_db.master_program_bansos;
     ]]></metadata>
   </model>
-
 
   <!-- error untuk C2 -->
   <model name="vm_penerima" type="VIRTUAL">

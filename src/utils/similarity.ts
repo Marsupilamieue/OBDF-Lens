@@ -1,4 +1,4 @@
-// Levenshtein edit distance between two strings
+// levensthein
 function editDistance(a: string, b: string): number {
   const m = a.length, n = b.length;
   const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
@@ -16,7 +16,6 @@ function editDistance(a: string, b: string): number {
   return dp[m][n];
 }
 
-// Similarity score between 0 and 1 based on edit distance
 export function similarity(a: string, b: string): number {
   const la = a.toLowerCase(), lb = b.toLowerCase();
   const longer = la.length >= lb.length ? la : lb;
@@ -25,7 +24,6 @@ export function similarity(a: string, b: string): number {
   return (longer.length - editDistance(longer, shorter)) / longer.length;
 }
 
-// Returns the closest match from candidates, or undefined if no good match
 export function findClosest(
   target: string,
   candidates: string[],

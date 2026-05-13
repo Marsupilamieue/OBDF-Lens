@@ -36,7 +36,7 @@ export interface DbConnectionConfig {
   password: string;
 }
 
-// Query DB
+// query db
 async function queryDbMeta(
   config: DbConnectionConfig,
   query: string,

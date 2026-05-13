@@ -24,20 +24,25 @@ target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
             FROM penduduk.v_penduduk
 
+# error A3: view blm dibuat (belum di ter handle karena masih terdetect A1)
+mappingId   penduduk-a3
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM vm_penduduk_kosong.v_penduduk
+
 # error A4: gaada prefix model (warning)
 mappingId   penduduk-a4
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
             FROM v_penduduk
 
-# error B1: Kolom tidak diekspos oleh view (ada di tabel fisik tapi tidak di-SELECT di vdb.xml)
+# error B1: kolom tidak diekspos oleh view
 mappingId   penduduk-b1
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik, alamat
             FROM vm_penduduk.v_penduduk
 
-# error B3: Kolom sama sekali tidak ada (bukan di view maupun tabel fisik)
-#         Tanpa koneksi DB tampil sebagai B1; dengan koneksi DB (Category C) dikonfirmasi B3
+# error B3: butuh koneksi ke DB dulu
 mappingId   penduduk-b3
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik, skor_kredit

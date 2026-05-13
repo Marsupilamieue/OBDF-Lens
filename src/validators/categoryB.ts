@@ -6,7 +6,7 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
-// Category B: Validate .obda column references against vdb.xml view columns.
+// Category B: validasi .obda kolom ke vdb
 export function validateCategoryB(
   mappings: ObdaMapping[],
   vdbData: VdbData,
@@ -22,17 +22,19 @@ export function validateCategoryB(
 
     const model = vdbData.models.find(m => m.name.toLowerCase() === mapping.fromModel.toLowerCase());
 
+    // harus ada modelnya dulu
     if (!model) { 
       continue; 
     }  // A2 
 
     const view = model.views.find(v => v.name.toLowerCase() === mapping.fromView.toLowerCase());
 
+    // harus ada view nya bener
     if (!view) { 
       continue; 
     }  // A1 
 
-    // B5: Check placeholders in target have corresponding SELECT columns
+    // B5
     for (const placeholder of mapping.targetPlaceholders) {
       if (!mapping.sourceColumns.some(c => c.toLowerCase() === placeholder.toLowerCase())) {
         const targetLineIdx = mapping.targetLine;
@@ -59,7 +61,7 @@ export function validateCategoryB(
       }
     }
 
-    // B1/B2/B3/B4: Check SELECT columns against view exposed columns
+    // B1 B2 B3 B4 cek kolom dengan yang exposed dari vdb
     for (const col of mapping.sourceColumns) {
       if (col === '*') { 
         continue; 
@@ -72,11 +74,10 @@ export function validateCategoryB(
         continue; 
       } 
 
-      // Column not in view - diagnose
       const colLine = findColumnLine(mapping.sourceQuery, col, mapping.sourceLine, mapping.sourceFirstLineOffset);
       const range = new vscode.Range(colLine.line, colLine.startChar, colLine.line, colLine.endChar);
 
-      // Check if it's an alias situation (B4)
+      // B4
       const rawName = Object.entries(view.aliasMap).find(([raw, alias]) =>
         raw.toLowerCase() === colLower
       );
@@ -109,7 +110,7 @@ export function validateCategoryB(
         continue;
       }
 
-      // Check similarity (B2)
+      // B2, similarity
       const closest = findClosest(col, view.exposedColumns);
       if (closest) {
         const data: ObdfDiagnosticData = {
@@ -138,7 +139,7 @@ export function validateCategoryB(
         continue;
       }
 
-      // B1 (column not in view)
+      // B1
       const data: ObdfDiagnosticData = {
         code: 'B1',
         fixes: [
@@ -166,7 +167,6 @@ export function validateCategoryB(
   return diagnostics;
 }
 
-// Find the line and character position of a column name in the source query text 
 function findColumnLine(
   sourceQuery: string,
   col: string,

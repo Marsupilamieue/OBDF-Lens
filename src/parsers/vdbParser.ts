@@ -1,6 +1,6 @@
 import { VdbData, VdbModel, VdbSource, VdbView } from '../types';
 
-// Parse columns from a SQL SELECT clause.
+// ambil kolom dari sql select
 export function parseSelectColumns(
   selectClause: string
 ): { exposedColumns: string[]; aliasMap: Record<string, string> } {
@@ -51,7 +51,7 @@ export function parseSelectColumns(
   return { exposedColumns, aliasMap };
 }
 
- // Parse a CREATE VIEW DDL to extract the source table reference (FROM clause).
+ // ambil source dan table
 function parseViewFromClause(ddl: string): { sourceName: string; tableName: string } {
   const fromMatch = ddl.match(/\bFROM\s+([\w]+)\.([\w]+)/i);
   if (fromMatch) {
@@ -118,7 +118,7 @@ export function parseVdb(text: string): VdbData {
     const modelLine = i;
     const views: VdbView[] = [];
 
-    // Find the closing </model> tag
+    // cari </model>
     let modelEndLine = lines.length - 1;
     for (let j = i + 1; j < lines.length; j++) {
       if (lines[j].includes('</model>')) { 
@@ -127,12 +127,13 @@ export function parseVdb(text: string): VdbData {
       }
     }
 
-    // Find CDATA blocks within this model
+    // cari vdata model
     let j = i + 1;
     while (j <= modelEndLine) {
       const cdataStart = lines[j].indexOf('<![CDATA[');
       if (cdataStart !== -1) {
-        // Collect DDL until ]]>
+
+        // ambil ddl sampe ]]>
         let ddl = lines[j].slice(cdataStart + 9);
         let cdataLine = j;
         let cdataEndLine = j;
@@ -154,7 +155,7 @@ export function parseVdb(text: string): VdbData {
           cdataEndLine = j;
         }
 
-        // Parse CREATE VIEW statements from the DDL
+        // create view
         const createViewRegex = /CREATE\s+VIEW\s+(\w+)\s+AS\s+([\s\S]+?)(?=CREATE\s+VIEW\s+|\s*$)/gi;
         let viewMatch: RegExpExecArray | null;
         while ((viewMatch = createViewRegex.exec(ddl)) !== null) {

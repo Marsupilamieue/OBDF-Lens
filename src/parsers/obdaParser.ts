@@ -1,8 +1,8 @@
 import { ObdaMapping } from '../types';
 
- // Extract placeholder names from an Ontop target template.
- // example: "ex:penduduk/{nik} a ex:Penduduk ; ex:nama {nama}^^xsd:string ."
- // ->['nik', 'nama']
+
+ // ambil placeholder dari .obda
+ //  target ex:penduduk/{nik} a ex:Pendudu jadi ['nik']
 function extractPlaceholders(target: string): string[] {
   const matches = target.matchAll(/\{(\w+)\}/g);
   const result = new Set<string>();
@@ -12,8 +12,7 @@ function extractPlaceholders(target: string): string[] {
   return [...result];
 }
 
-// Parse SELECT column names from a SQL source query. 
-// Returns a simple list of column names/aliases used in SELECT
+// ambil kolom names/alias yang dipake di SELECT
 function parseSelectColumns(query: string): string[] {
   const selectMatch = query.match(/SELECT\s+([\s\S]+?)\s+FROM\b/i);
   if (!selectMatch) { 
@@ -54,7 +53,6 @@ function parseSelectColumns(query: string): string[] {
   }).filter(c => c && c.toUpperCase() !== 'DISTINCT');
 }
 
-// Parse an .obda file and return all mapping entries
 export function parseObda(text: string): ObdaMapping[] {
   const lines = text.split('\n');
   const mappings: ObdaMapping[] = [];
