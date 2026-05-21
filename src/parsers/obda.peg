@@ -1,0 +1,82 @@
+// ─── OBDA Grammar for tsPEG ─────────────────────────────────────────────────
+// Parses the Ontop OBDA mapping file format.
+// Sections: [PrefixDeclaration] and [MappingDeclaration] @collection [[...]]
+
+obdaFile
+    := _WS sections=section* _WS $
+
+section
+    := prefixSection
+     | mappingSection
+
+// ─── Prefix Section ─────────────────────────────────────────────────────────
+
+prefixSection
+    := header=prefixHeader entries=prefixEntry*
+
+prefixHeader
+    := _WS '\[PrefixDeclaration\]' _EOL
+
+prefixEntry
+    := _WS name='[a-zA-Z_][a-zA-Z0-9_]*:' _HTAB+ iri='[^\r\n]+' _EOL
+     | _WS name=':' _HTAB+ iri='[^\r\n]+' _EOL
+     | _BLANKLINE
+
+// ─── Mapping Section ────────────────────────────────────────────────────────
+// First block can appear without a preceding blank line.
+// Subsequent blocks MUST be separated by at least one blank line.
+
+mappingSection
+    := _WS '\[MappingDeclaration\]' _SP '@collection' _SP '\[\[' _EOL
+       firstBlock=firstMappingBlock?
+       restBlocks=subsequentMappingBlock*
+       _WS '\]\]' _EOL?
+
+firstMappingBlock
+    := _BLANKLINE* commentOrBlank* idPart=mappingId targetPart=targetField sourcePart=sourceField
+
+subsequentMappingBlock
+    := _BLANKLINE+ commentOrBlank* idPart=mappingId targetPart=targetField sourcePart=sourceField
+
+commentOrBlank
+    := commentLine
+     | _BLANKLINE
+
+commentLine
+    := '[#;][^\r\n]*' _EOL
+
+// ─── Mapping Fields ─────────────────────────────────────────────────────────
+
+mappingId
+    := idPos=@ 'mappingId' _SP+ id='[^\r\n]+' _EOL
+
+targetField
+    := targetPos=@ 'target' _SP+ firstLine='[^\r\n]+' _EOL
+       continuations=targetContinuation*
+
+targetContinuation
+    := _INDENT value='[^\r\n]+' _EOL
+
+sourceField
+    := sourcePos=@ 'source' sourceOffset=@ _SP+ firstLine='[^\r\n]+' _EOL
+       continuations=sourceContinuation*
+
+sourceContinuation
+    := _INDENT value='[^\r\n]+' _EOL
+
+// ─── Whitespace Helpers ─────────────────────────────────────────────────────
+
+_WS       := '[ \t\r\n]*'
+_SP       := '[ \t]'
+_HTAB     := '[ \t]'
+_EOL      := '\r?\n'
+            | $
+_BLANKLINE := '[ \t]*\r?\n'
+_INDENT    := '[ \t][ \t]+'
+              !'mappingId'
+              !'\[MappingDeclaration'
+              !'\[PrefixDeclaration'
+              !'source'
+              !'target'
+              !'[#;]'
+              !'\]\]'

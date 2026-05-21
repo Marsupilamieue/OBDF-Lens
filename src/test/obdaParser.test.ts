@@ -53,6 +53,20 @@ source      SELECT nik, nama
     assert.ok(!result[0].sourceColumns.includes('no_kk'));
   });
 
+  test('strict: no blank line between mappings → discard merged segment', () => {
+    const obda = `
+[MappingDeclaration] @collection [[
+mappingId   a
+target      ex:x/{x} .
+source      SELECT x FROM m.v
+mappingId   b
+target      ex:y/{y} .
+source      SELECT y FROM m.v
+]]`;
+    const result = parseObda(obda);
+    assert.strictEqual(result.length, 0);
+  });
+
   test('parse multiple mappings', () => {
     const obda = `
 [MappingDeclaration] @collection [[
