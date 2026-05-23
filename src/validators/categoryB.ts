@@ -74,7 +74,12 @@ export function validateCategoryB(
         continue; 
       } 
 
-      const colLine = findColumnLine(mapping.sourceQuery, col, mapping.sourceLine, mapping.sourceFirstLineOffset);
+      const colLine = findColumnLine(
+        mapping.sourceQuery,
+        col,
+        mapping.sourceLine,
+        mapping.sourceLineOffsets
+      );
       const range = new vscode.Range(colLine.line, colLine.startChar, colLine.line, colLine.endChar);
 
       // B4
@@ -171,14 +176,14 @@ function findColumnLine(
   sourceQuery: string,
   col: string,
   sourceStartLine: number,
-  firstLineOffset: number = 0
+  lineOffsets: number[] = []
 ): { line: number; startChar: number; endChar: number } {
   const lines = sourceQuery.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const regex = new RegExp(`\\b${col}\\b`, 'i');
     const match = lines[i].match(regex);
     if (match && match.index !== undefined) {
-      const offset = i === 0 ? firstLineOffset : 0;
+      const offset = lineOffsets[i] ?? 0;
       return {
         line: sourceStartLine + i,
         startChar: match.index + offset,
@@ -186,5 +191,6 @@ function findColumnLine(
       };
     }
   }
-  return { line: sourceStartLine, startChar: firstLineOffset, endChar: firstLineOffset + col.length };
+  const fallbackOffset = lineOffsets[0] ?? 0;
+  return { line: sourceStartLine, startChar: fallbackOffset, endChar: fallbackOffset + col.length };
 }

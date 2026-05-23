@@ -99,7 +99,8 @@ interface FromRef {
 function extractFromRef(
   sourceLines: string[],
   sourceStartLine: number,
-  sourceFirstLineOffset: number
+  sourceFirstLineOffset: number,
+  sourceLineOffsets: number[]
 ): FromRef {
   const empty: FromRef = {
     fromModel: '', fromView: '', fromRaw: '',
@@ -124,10 +125,8 @@ function extractFromRef(
     const fromView = dotIdx !== -1 ? fromRaw.slice(dotIdx + 1) : fromRaw;
 
     const leadingWhitespace = afterFrom.length - afterFrom.trimStart().length;
-    let fromStartChar = fromKeywordIdx + 4 + leadingWhitespace;
-    if (i === 0) {
-      fromStartChar += sourceFirstLineOffset;
-    }
+    const lineOffset = sourceLineOffsets[i] ?? (i === 0 ? sourceFirstLineOffset : 0);
+    let fromStartChar = fromKeywordIdx + 4 + leadingWhitespace + lineOffset;
     const fromEndChar = fromStartChar + fromRaw.length;
 
     return {
@@ -149,8 +148,8 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
   const targetLine = block.targetPart.targetPos.line - 1;
   const sourceLine = block.sourcePart.sourcePos.line - 1;
 
-  // sourceFirstLineOffset: number of characters before the first source content 
-  // (the "source" keyword + spaces). sourceOffset is captured right after "source" keyword.
+  // sourceFirstLineOffset: column where the first source content starts
+  // ("source" keyword + spaces). sourceOffset is captured right before the first source content.
   const sourceFirstLineOffset = block.sourcePart.sourceOffset.offset;
 
   // Assemble target text (multi-line joined by space)
@@ -165,6 +164,12 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
   const sourceLines = [sourceFirstLine, ...sourceContLines];
   const sourceText = sourceLines.join('\n');
 
+  const sourceLineOffsets: number[] = [sourceFirstLineOffset];
+  for (const cont of block.sourcePart.continuations) {
+    const contOffset = (cont as { offset?: { offset: number } }).offset?.offset;
+    sourceLineOffsets.push(contOffset ?? 0);
+  }
+
   const targetPlaceholders = extractPlaceholders(targetText);
   const sourceColumns = parseSelectColumns(sourceText);
 
@@ -172,6 +177,7 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
     sourceLines,
     sourceLine,
     sourceFirstLineOffset,
+    sourceLineOffsets,
   );
 
   return {
@@ -183,6 +189,7 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
     sourceQuery: sourceText,
     sourceLine,
     sourceFirstLineOffset,
+    sourceLineOffsets,
     sourceColumns,
     ...fromRef,
   };

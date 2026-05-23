@@ -58,11 +58,11 @@ targetContinuation
     := _INDENT value='[^\r\n]+' _EOL
 
 sourceField
-    := sourcePos=@ 'source' sourceOffset=@ _SP+ firstLine='[^\r\n]+' _EOL
+    := sourcePos=@ 'source' _SP+ sourceOffset=@ firstLine='[^\r\n]+' _EOL
        continuations=sourceContinuation*
 
 sourceContinuation
-    := _INDENT value='[^\r\n]+' _EOL
+    := _INDENT offset=@ value='[^\r\n]+' _EOL
 
 // ─── Whitespace Helpers ─────────────────────────────────────────────────────
 

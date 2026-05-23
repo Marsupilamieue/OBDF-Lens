@@ -35,6 +35,7 @@ export interface ObdaMapping {
   sourceQuery: string;
   sourceLine: number;
   sourceFirstLineOffset: number;
+  sourceLineOffsets: number[];
   sourceColumns: string[];      
   fromModel: string;             // vm_penduduk
   fromView: string;              // v_penduduk

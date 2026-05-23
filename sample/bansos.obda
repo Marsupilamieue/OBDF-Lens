@@ -62,9 +62,9 @@ source      SELECT program_id, nama_program
 
 # error B5: no_kk di target tapi blm di select
 mappingId   penduduk-b5
-target      ex:penduduk/{nik} a ex:Penduduk ;
-              ex:noKK {no_kk}^^xsd:string .
-source      SELECT nik, nama
+target      ex:penduduk/{nik} a ex:Penduduk ; 
+            ex:noKK {no_kk}^^xsd:string .
+source      SELECT nik, nama,                     
             FROM vm_penduduk.v_penduduk
 
 ]]

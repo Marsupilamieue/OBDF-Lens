@@ -43,10 +43,10 @@
 * targetContinuation
 *     := _INDENT value='[^\r\n]+' _EOL
 * sourceField
-*     := sourcePos=@ 'source' sourceOffset=@ _SP+ firstLine='[^\r\n]+' _EOL
+*     := sourcePos=@ 'source' _SP+ sourceOffset=@ firstLine='[^\r\n]+' _EOL
 *        continuations=sourceContinuation*
 * sourceContinuation
-*     := _INDENT value='[^\r\n]+' _EOL
+*     := _INDENT offset=@ value='[^\r\n]+' _EOL
 * // ─── Whitespace Helpers ─────────────────────────────────────────────────────
 * _WS       := '[ \t\r\n]*'
 * _SP       := '[ \t]'
@@ -171,6 +171,7 @@ export interface sourceField {
 }
 export interface sourceContinuation {
     kind: ASTKinds.sourceContinuation;
+    offset: PosInfo;
     value: string;
 }
 export type _WS = string;
@@ -455,8 +456,8 @@ export class Parser {
                 if (true
                     && ($scope$sourcePos = this.mark()) !== null
                     && this.regexAccept(String.raw`(?:source)`, "", $$dpth + 1, $$cr) !== null
-                    && ($scope$sourceOffset = this.mark()) !== null
                     && this.loopPlus<_SP>(() => this.match_SP($$dpth + 1, $$cr)) !== null
+                    && ($scope$sourceOffset = this.mark()) !== null
                     && ($scope$firstLine = this.regexAccept(String.raw`(?:[^\r\n]+)`, "", $$dpth + 1, $$cr)) !== null
                     && this.match_EOL($$dpth + 1, $$cr) !== null
                     && ($scope$continuations = this.loop<sourceContinuation>(() => this.matchsourceContinuation($$dpth + 1, $$cr), 0, -1)) !== null
@@ -469,14 +470,16 @@ export class Parser {
     public matchsourceContinuation($$dpth: number, $$cr?: ErrorTracker): Nullable<sourceContinuation> {
         return this.run<sourceContinuation>($$dpth,
             () => {
+                let $scope$offset: Nullable<PosInfo>;
                 let $scope$value: Nullable<string>;
                 let $$res: Nullable<sourceContinuation> = null;
                 if (true
                     && this.match_INDENT($$dpth + 1, $$cr) !== null
+                    && ($scope$offset = this.mark()) !== null
                     && ($scope$value = this.regexAccept(String.raw`(?:[^\r\n]+)`, "", $$dpth + 1, $$cr)) !== null
                     && this.match_EOL($$dpth + 1, $$cr) !== null
                 ) {
-                    $$res = {kind: ASTKinds.sourceContinuation, value: $scope$value};
+                    $$res = {kind: ASTKinds.sourceContinuation, offset: $scope$offset, value: $scope$value};
                 }
                 return $$res;
             });
