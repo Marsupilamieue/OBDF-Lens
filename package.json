@@ -20,8 +20,13 @@
     "languages": [
       {
         "id": "obda",
-        "extensions": [".obda"],
-        "aliases": ["OBDA Mapping", "obda"]
+        "extensions": [
+          ".obda"
+        ],
+        "aliases": [
+          "OBDA Mapping",
+          "obda"
+        ]
       }
     ],
     "commands": [
@@ -40,13 +45,31 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "host": { "type": "string", "default": "localhost" },
-              "port": { "type": "number", "default": 5432 },
-              "database": { "type": "string" },
-              "user": { "type": "string" },
-              "password": { "type": "string" }
+              "host": {
+                "type": "string",
+                "default": "localhost"
+              },
+              "port": {
+                "type": "number",
+                "default": 5432
+              },
+              "database": {
+                "type": "string"
+              },
+              "user": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              }
             },
-            "required": ["host", "port", "database", "user", "password"]
+            "required": [
+              "host",
+              "port",
+              "database",
+              "user",
+              "password"
+            ]
           }
         }
       }
@@ -54,25 +77,27 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "generate:parser": "tspeg src/parsers/obda.peg src/parsers/obdaParserGenerated.ts",
+    "compile": "npm run generate:parser && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
   },
   "dependencies": {
+    "fast-xml-parser": "^5.8.0",
     "pg": "^8.13.3"
   },
   "devDependencies": {
-    "@types/vscode": "^1.110.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/pg": "^8.11.11",
-    "typescript-eslint": "^8.56.1",
-    "eslint": "^9.39.3",
-    "typescript": "^5.9.3",
+    "@types/vscode": "^1.110.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.3",
+    "tspeg": "^3.3.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
   }
 }
-
