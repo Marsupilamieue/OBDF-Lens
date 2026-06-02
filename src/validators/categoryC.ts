@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import { VdbData, VdbView, ObdfDiagnosticData, QuickFix } from '../types';
 import { findClosest } from '../utils/similarity';
-
-// Find the range of an identifier (whole-word) within view.ddl.
 function findInDdl(view: VdbView, identifier: string, startFrom: number = 0): vscode.Range {
   const regex = new RegExp(`\\b${identifier}\\b`, 'i');
   const match = view.ddl.slice(startFrom).match(regex);
@@ -21,9 +19,14 @@ function findInDdl(view: VdbView, identifier: string, startFrom: number = 0): vs
   const endCharOnLine = toEnd[toEnd.length - 1].length;
 
   const absStartLine = view.viewLine + startLineOffset;
-  const absStartChar = startLineOffset === 0 ? view.viewDdlStartChar + startCharOnLine : startCharOnLine;
+  const absStartChar = startLineOffset === 0
+    ? view.viewDdlStartChar + startCharOnLine
+    : startCharOnLine;
+
   const absEndLine = view.viewLine + endLineOffset;
-  const absEndChar = endLineOffset === 0 ? view.viewDdlStartChar + endCharOnLine : endCharOnLine;
+  const absEndChar = endLineOffset === 0
+    ? view.viewDdlStartChar + endCharOnLine
+    : endCharOnLine;
 
   return new vscode.Range(absStartLine, absStartChar, absEndLine, absEndChar);
 }
@@ -34,6 +37,11 @@ export interface DbConnectionConfig {
   database: string;
   user: string;
   password: string;
+}
+
+export interface DbMetaProvider {
+  getTables: (sourceName: string, connConfig: DbConnectionConfig) => Promise<string[]>;
+  getColumns: (sourceName: string, tableName: string, connConfig: DbConnectionConfig) => Promise<string[]>;
 }
 
 // query db
@@ -64,14 +72,31 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
+/** Convert a vscode.Range to the flat FixEdit shape expected by types.ts. */
+function toFixEdit(uri: string, range: vscode.Range, newText: string) {
+  return {
+    uri,
+    startLine: range.start.line,
+    startChar: range.start.character,
+    endLine: range.end.line,
+    endChar: range.end.character,
+    newText,
+  };
+}
+
 // Category C: Validate vdb.xml virtual view DDL against physical database.
 export async function validateCategoryC(
   vdbData: VdbData,
-  vdbUri: string
+  vdbUri: string,
+  options?: {
+    metaProvider?: DbMetaProvider;
+    connections?: Record<string, DbConnectionConfig>;
+  }
 ): Promise<vscode.Diagnostic[]> {
   const diagnostics: vscode.Diagnostic[] = [];
   const config = vscode.workspace.getConfiguration('obdf-lens');
-  const connections = config.get<Record<string, DbConnectionConfig>>('connections') ?? {};
+  const connections = options?.connections ?? config.get<Record<string, DbConnectionConfig>>('connections') ?? {};
+  const metaProvider = options?.metaProvider;
 
   if (Object.keys(connections).length === 0) {
     return diagnostics; 
@@ -84,28 +109,28 @@ export async function validateCategoryC(
     if (tableCache[sourceName]) { 
       return tableCache[sourceName]; 
     }
-    try {
-      const tables = await queryDbMeta(
+    const tables = metaProvider
+      ? await metaProvider.getTables(sourceName, connConfig)
+      : await queryDbMeta(
         connConfig,
         `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`,
         []
       );
-      tableCache[sourceName] = tables;
-      return tables;
-    } catch (err) {
-      return [];
-    }
+    tableCache[sourceName] = tables;
+    return tables;
   }
 
   async function getColumns(sourceName: string, tableName: string, connConfig: DbConnectionConfig): Promise<string[]> {
     const key = `${sourceName}.${tableName}`;
     if (columnCache[key]) { return columnCache[key]; }
     try {
-      const columns = await queryDbMeta(
-        connConfig,
-        `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
-        [tableName]
-      );
+      const columns = metaProvider
+        ? await metaProvider.getColumns(sourceName, tableName, connConfig)
+        : await queryDbMeta(
+          connConfig,
+          `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
+          [tableName]
+        );
       columnCache[key] = columns;
       return columns;
     } catch {
@@ -120,13 +145,36 @@ export async function validateCategoryC(
       }
 
       const connConfig = connections[view.sourceName];
-      if (!connConfig) { 
-        continue; 
-      }  
+
+      // C1a: sourceName from DDL has no matching connection config → unknown/mistyped source.
+      // Emit C1 immediately — we cannot reach the DB at all.
+      if (!connConfig) {
+        const knownSources = Object.keys(connections);
+        // Only report C1 when there are configured connections to compare against;
+        // if the user has zero connections for this source we skip silently (already
+        // handled by the early-exit above for empty connections map).
+        const closest = findClosest(view.sourceName, knownSources);
+        const data: ObdfDiagnosticData = { code: 'C1', fixes: [] };
+        let msg = `[C1] Source '${view.sourceName}' tidak dikenali (tidak ada di konfigurasi connections)\n`;
+        if (closest) {
+          msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
+        }
+        msg += `Source yang terkonfigurasi:\n`;
+        msg += knownSources.map(s => `  • ${s}`).join('\n');
+
+        const fromIdx = view.ddl.search(/\bFROM\b/i);
+        const c1Range = findInDdl(view, view.sourceName, fromIdx !== -1 ? fromIdx : 0);
+        const diag = new vscode.Diagnostic(c1Range, msg, vscode.DiagnosticSeverity.Error);
+        diag.code = 'C1';
+        diag.source = 'OBDF Lens';
+        (diag as any).data = data;
+        diagnostics.push(diag);
+        continue;
+      }
 
       const range = new vscode.Range(view.viewLine, 0, view.viewLine, 200);
 
-      // C1: Check if source can be connected
+      // C1b: Connection config exists but the actual DB connection fails at runtime.
       let tables: string[];
       try {
         tables = await getTables(view.sourceName, connConfig);
@@ -158,11 +206,14 @@ export async function validateCategoryC(
 
       if (!tableExists) {
         const closest = findClosest(view.tableName, tables);
+        const fromIdx = view.ddl.search(/\bFROM\b/i);
+        const c2Range = findInDdl(view, view.tableName, fromIdx !== -1 ? fromIdx : 0);
+
         const data: ObdfDiagnosticData = {
           code: 'C2',
           fixes: closest ? [{
-            title: `Ganti dengan '${closest.match}'`,
-            edits: [], 
+            title: `Ganti tabel '${view.tableName}' → '${closest.match}'`,
+            edits: [toFixEdit(vdbUri, c2Range, closest.match)],
           }] : [],
         };
 
@@ -177,8 +228,6 @@ export async function validateCategoryC(
           : `  • ${t}`
         ).join('\n');
 
-        const fromIdx = view.ddl.search(/\bFROM\b/i);
-        const c2Range = findInDdl(view, view.tableName, fromIdx !== -1 ? fromIdx : 0);
         const diag = new vscode.Diagnostic(c2Range, msg, vscode.DiagnosticSeverity.Error);
         diag.code = 'C2';
         diag.source = 'OBDF Lens';
@@ -205,11 +254,14 @@ export async function validateCategoryC(
         const exists = dbColumns.some(c => c.toLowerCase() === rawCol.toLowerCase());
         if (!exists) {
           const closest = findClosest(rawCol, dbColumns);
+          const selectIdx = view.ddl.search(/\bSELECT\b/i);
+          const c3Range = findInDdl(view, rawCol, selectIdx !== -1 ? selectIdx : 0);
+
           const data: ObdfDiagnosticData = {
             code: 'C3',
             fixes: closest ? [{
-              title: `Ganti dengan '${closest.match}'`,
-              edits: [],
+              title: `Ganti kolom '${rawCol}' → '${closest.match}'`,
+              edits: [toFixEdit(vdbUri, c3Range, closest.match)],
             }] : [],
           };
 
@@ -224,8 +276,6 @@ export async function validateCategoryC(
             : `  • ${c}`
           ).join('\n');
 
-          const selectIdx = view.ddl.search(/\bSELECT\b/i);
-          const c3Range = findInDdl(view, rawCol, selectIdx !== -1 ? selectIdx : 0);
           const diag = new vscode.Diagnostic(
             c3Range,
             msg,
@@ -248,11 +298,13 @@ export async function validateCategoryC(
           const exists = dbColumns.some(c => c.toLowerCase() === joinCol.toLowerCase());
           if (!exists) {
             const closest = findClosest(joinCol, dbColumns);
+            const c4Range = findInDdl(view, joinCol, jm.index ?? 0);
+
             const data: ObdfDiagnosticData = {
               code: 'C4',
               fixes: closest ? [{
-                title: `Ganti '${joinCol}' -> '${closest.match}' di JOIN condition`,
-                edits: [],
+                title: `Ganti '${joinCol}' → '${closest.match}' di JOIN condition`,
+                edits: [toFixEdit(vdbUri, c4Range, closest.match)],
               }] : [],
             };
 
@@ -267,7 +319,6 @@ export async function validateCategoryC(
               : `  • ${c}`
             ).join('\n');
 
-            const c4Range = findInDdl(view, joinCol, jm.index ?? 0);
             const diag = new vscode.Diagnostic(
               c4Range,
               msg,

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="c1-cases" version="1">
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_c1_01 suggestion=bansos_db_c1 -->
+  <model name="vm_c1_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c1_01 AS
+        SELECT nik, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+</vdb>

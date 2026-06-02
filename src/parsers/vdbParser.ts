@@ -61,6 +61,17 @@ function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodySt
   return { ddl: xml.slice(bodyStartAbs, close), bodyStartAbs };
 }
 
+function extractRawIdentifier(expr: string): string {
+  const trimmed = expr.trim();
+  if (/^\w+$/.test(trimmed)) { return trimmed; }
+  const insideParen = trimmed.match(/\(\s*(\w+)/);
+  if (insideParen) { return insideParen[1]; }
+  const qualified = trimmed.match(/\w+\.(\w+)/);
+  if (qualified) { return qualified[1]; }
+  const lastWord = trimmed.match(/(\w+)\s*$/);
+  return lastWord ? lastWord[1] : trimmed;
+}
+
 // ambil kolom dari sql select
 export function parseSelectColumns(
   selectClause: string
@@ -95,8 +106,11 @@ export function parseSelectColumns(
     if (asMatch) {
       const alias = asMatch[1];
       const beforeAs = part.slice(0, part.lastIndexOf(asMatch[0])).trim();
-      const rawMatch = beforeAs.match(/(\w+)\s*$/);
-      const raw = rawMatch ? rawMatch[1] : beforeAs;
+      // extractRawIdentifier handles complex expressions:
+      // "CAST(nominal AS BIGINT)" → "nominal"  (not "BIGINT" — that was the bug)
+      // "COALESCE(penghasilan, 0)" → "penghasilan"
+      // "nama_program" → "nama_program"
+      const raw = extractRawIdentifier(beforeAs);
       exposedColumns.push(alias);
       if (raw.toLowerCase() !== alias.toLowerCase()) {
         aliasMap[raw] = alias;
