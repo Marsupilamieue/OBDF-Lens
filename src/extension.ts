@@ -7,11 +7,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   const diagnosticsProvider = new DiagnosticsProvider(context);
 
-  // Register code action provider for .obda and vdb.xml
   const codeActionDisposable = vscode.languages.registerCodeActionsProvider(
     [
       { language: 'obda' },
-      { language: 'xml', pattern: '**/vdb.xml' },
+      { language: 'xml' },
     ],
     new CodeActionProvider(),
     { providedCodeActionKinds: CodeActionProvider.providedCodeActionKinds }
@@ -26,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(obdaWatcher);
 
   // Watch vdb.xml
-  const vdbWatcher = vscode.workspace.createFileSystemWatcher('**/vdb.xml');
+  const vdbWatcher = vscode.workspace.createFileSystemWatcher('**/*.xml');
   vdbWatcher.onDidChange(uri => diagnosticsProvider.validateVdb(uri));
   vdbWatcher.onDidCreate(uri => diagnosticsProvider.validateVdb(uri));
   context.subscriptions.push(vdbWatcher);
@@ -36,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument(doc => {
       if (doc.fileName.endsWith('.obda')) {
         diagnosticsProvider.validateObda(doc.uri);
-      } else if (doc.fileName.endsWith('vdb.xml')) {
+      } else if (doc.fileName.endsWith('.xml')) {
         diagnosticsProvider.validateVdb(doc.uri);
       }
     })
@@ -47,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidSaveTextDocument(doc => {
       if (doc.fileName.endsWith('.obda')) {
         diagnosticsProvider.validateObda(doc.uri);
-      } else if (doc.fileName.endsWith('vdb.xml')) {
+      } else if (doc.fileName.endsWith('.xml')) {
         diagnosticsProvider.validateVdb(doc.uri);
       }
     })

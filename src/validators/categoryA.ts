@@ -6,7 +6,7 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
-// Category A: Validate .obda FROM references against vdb.xml models/views.
+// Category A: validate .obda ke vdb
 export function validateCategoryA(
   mappings: ObdaMapping[],
   vdbData: VdbData,
@@ -35,7 +35,7 @@ export function validateCategoryA(
       mapping.fromLine, mapping.fromEndChar
     );
 
-    // A4: No model prefix (just view name)
+    // A4
     if (!mapping.fromModel) {
       const match = allViews.find(v => 
         v.view.toLowerCase() === mapping.fromView.toLowerCase()
@@ -77,13 +77,13 @@ export function validateCategoryA(
       continue;
     }
 
-    // Check model exists
+    // ada nama model berarti
     const modelMatch = vdbData.models.find(m => 
       m.name.toLowerCase() === mapping.fromModel.toLowerCase()
     );
 
     if (!modelMatch) {
-      // A2: Model name wrong
+      // A2
       const closest = findClosest(mapping.fromModel, allModelNames);
       const data: ObdfDiagnosticData = { code: 'A2', fixes: [] };
 
@@ -113,7 +113,7 @@ export function validateCategoryA(
       continue;
     }
 
-    // Model found - check view exists
+    // kelo model ketemu
     const viewMatch = modelMatch.views.find(v => 
       v.name.toLowerCase() === mapping.fromView.toLowerCase()
     );
@@ -128,7 +128,7 @@ export function validateCategoryA(
       let severity: vscode.DiagnosticSeverity;
 
       if (viewNames.length === 0) {
-        // A3: No views at all in the model
+        // A3
         code = 'A3';
         msg = `[A3] View '${mapping.fromRaw}' tidak ditemukan di vdb.xml\nSeperti view ini belum didefinisikan sama sekali.\n`;
         msg += `\nSuggestion: Tambahkan virtual model berikut ke vdb.xml:\n`;

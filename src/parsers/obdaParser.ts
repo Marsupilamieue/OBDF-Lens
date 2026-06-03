@@ -1,159 +1,229 @@
 import { ObdaMapping } from '../types';
+import {
+  parse,
+  firstMappingBlock,
+  subsequentMappingBlock,
+  mappingSection,
+  ASTKinds,
+} from './obdaParserGenerated';
 
- // Extract placeholder names from an Ontop target template.
- // example: "ex:penduduk/{nik} a ex:Penduduk ; ex:nama {nama}^^xsd:string ."
- // ->['nik', 'nama']
+type MappingBlock = firstMappingBlock | subsequentMappingBlock;
+
+// ─── Placeholder extraction ────────────────────────────────────────────────
+
 function extractPlaceholders(target: string): string[] {
-  const matches = target.matchAll(/\{(\w+)\}/g);
   const result = new Set<string>();
-  for (const match of matches) { 
-    result.add(match[1]); 
+  const matches = target.matchAll(/\{(\w+)\}/g);
+  for (const match of matches) {
+    result.add(match[1]);
   }
   return [...result];
 }
 
-// Parse SELECT column names from a SQL source query. 
-// Returns a simple list of column names/aliases used in SELECT
+// ─── SQL column extraction ─────────────────────────────────────────────────
+
 function parseSelectColumns(query: string): string[] {
-  const selectMatch = query.match(/SELECT\s+([\s\S]+?)\s+FROM\b/i);
-  if (!selectMatch) { 
+  const normalized = query.replace(/\s+/g, ' ');
+  const selectIdx = normalized.search(/\bSELECT\b/i);
+  if (selectIdx === -1) { return []; }
+
+  const afterSelect = selectIdx + 6;
+  let depth = 0;
+  let fromIdx = -1;
+  for (let i = afterSelect; i < normalized.length - 3; i++) {
+    if (normalized[i] === '(') { 
+      depth++; 
+    }else if (normalized[i] === ')') { 
+      depth--; 
+    }else if (depth === 0 &&
+             /\bFROM\b/i.test(normalized.slice(i, i + 4)) &&
+             (i === 0 || /\s/.test(normalized[i - 1])) &&
+             (i + 4 >= normalized.length || /\s/.test(normalized[i + 4]))) {
+      fromIdx = i;
+      break;
+    }
+  }
+
+  if (fromIdx === -1) { 
     return []; 
   }
 
-  const selectPart = selectMatch[1];
-  const cols: string[] = [];
+  const selectPart = normalized.slice(afterSelect, fromIdx).trim();
 
-  let depth = 0, current = '';
+  const parts: string[] = [];
+  depth = 0;
+  let current = '';
   for (const ch of selectPart) {
     if (ch === '(') { 
       depth++; 
       current += ch; 
-    }else if (ch === ')') {
-      depth--;
+    }else if (ch === ')') { 
+      depth--; 
       current += ch; 
     }else if (ch === ',' && depth === 0) { 
-      cols.push(current.trim()); 
+      parts.push(current.trim()); 
       current = ''; 
     }else { 
       current += ch; 
     }
   }
-
   if (current.trim()) { 
-    cols.push(current.trim()); 
+    parts.push(current.trim()); 
   }
 
-  return cols.map(col => {
-    col = col.replace(/\s+/g, ' ').trim();
-    const asMatch = col.match(/\bAS\s+(\w+)\s*$/i);
+  // Extract column name or alias from each part
+  return parts.map(part => {
+    part = part.replace(/\s+/g, ' ').trim();
+    // Check for AS alias
+    const asMatch = part.match(/\bAS\s+(\w+)\s*$/i);
     if (asMatch) { 
       return asMatch[1]; 
     }
-    const wordMatch = col.match(/(\w+)\s*$/);
-    return wordMatch ? wordMatch[1] : col;
+    // Last word is the column name
+    const wordMatch = part.match(/(\w+)\s*$/);
+    return wordMatch ? wordMatch[1] : part;
   }).filter(c => c && c.toUpperCase() !== 'DISTINCT');
 }
 
-// Parse an .obda file and return all mapping entries
-export function parseObda(text: string): ObdaMapping[] {
-  const lines = text.split('\n');
-  const mappings: ObdaMapping[] = [];
+// ─── FROM clause extraction ────────────────────────────────────────────────
 
-  const mappingIdIndices: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (/^\s*mappingId\s+\S/.test(lines[i])) {
-      mappingIdIndices.push(i);
-    }
-  }
+interface FromRef {
+  fromModel: string;
+  fromView: string;
+  fromRaw: string;
+  fromLine: number;       
+  fromStartChar: number;
+  fromEndChar: number;
+}
 
-  for (let mi = 0; mi < mappingIdIndices.length; mi++) {
-    const startLine = mappingIdIndices[mi];
-    const endLine = mi + 1 < mappingIdIndices.length
-      ? mappingIdIndices[mi + 1] - 1
-      : lines.length - 1;
+function extractFromRef(
+  sourceLines: string[],
+  sourceStartLine: number,
+  sourceFirstLineOffset: number,
+  sourceLineOffsets: number[]
+): FromRef {
+  const empty: FromRef = {
+    fromModel: '', fromView: '', fromRaw: '',
+    fromLine: sourceStartLine, fromStartChar: 0, fromEndChar: 0,
+  };
 
-    const idMatch = lines[startLine].match(/^\s*mappingId\s+(\S+)/);
-    const id = idMatch ? idMatch[1] : '';
-
-    let targetLine = -1;
-    let targetText = '';
-    let sourceLine = -1;
-    let sourceText = '';
-
-    for (let i = startLine + 1; i <= endLine; i++) {
-      if (/^\s*target\s+/.test(lines[i]) && targetLine === -1) {
-        targetLine = i;
-        const targetPrefix = lines[i].match(/^\s*target\s+/)?.[0] ?? '';
-        targetText = lines[i].slice(targetPrefix.length);
-        let j = i + 1;
-        while (j <= endLine && /^\s{2,}/.test(lines[j]) && !/^\s*source\s+/.test(lines[j])) {
-          targetText += ' ' + lines[j].trim();
-          j++;
-        }
-      } else if (/^\s*source\s+/.test(lines[i]) && sourceLine === -1) {
-        sourceLine = i;
-        const sourcePrefix = lines[i].match(/^\s*source\s+/)?.[0] ?? '';
-        sourceText = lines[i].slice(sourcePrefix.length);
-        let j = i + 1;
-        while (j <= endLine && /^\s{2,}/.test(lines[j])) {
-          sourceText += '\n' + lines[j];
-          j++;
-        }
-      }
+  for (let i = 0; i < sourceLines.length; i++) {
+    const line = sourceLines[i];
+    const fromKeywordIdx = line.search(/\bFROM\b/i);
+    if (fromKeywordIdx === -1) { 
+      continue; 
     }
 
-    if (!id || sourceLine === -1 || targetLine === -1) { continue; }
+    // Get the table reference after FROM
+    const afterFrom = line.slice(fromKeywordIdx + 4);
+    const refMatch = afterFrom.match(/^\s+([\w.]+)/);
+    if (!refMatch) { continue; }
 
-    const targetPlaceholders = extractPlaceholders(targetText);
-    const sourceColumns = parseSelectColumns(sourceText);
-    const sourceFirstLineOffset =
-      lines[sourceLine].match(/^\s*source\s+/)?.[0].length ?? 0;
+    const fromRaw = refMatch[1];
+    const dotIdx = fromRaw.indexOf('.');
+    const fromModel = dotIdx !== -1 ? fromRaw.slice(0, dotIdx) : '';
+    const fromView = dotIdx !== -1 ? fromRaw.slice(dotIdx + 1) : fromRaw;
 
-    const sourceLines = sourceText.split('\n');
-    let fromModel = '';
-    let fromView = '';
-    let fromRaw = '';
-    let fromLine = sourceLine;
-    let fromStartChar = 0;
-    let fromEndChar = 0;
+    const leadingWhitespace = afterFrom.length - afterFrom.trimStart().length;
+    const lineOffset = sourceLineOffsets[i] ?? (i === 0 ? sourceFirstLineOffset : 0);
+    let fromStartChar = fromKeywordIdx + 4 + leadingWhitespace + lineOffset;
+    const fromEndChar = fromStartChar + fromRaw.length;
 
-    for (let i = 0; i < sourceLines.length; i++) {
-      const fm = sourceLines[i].match(/\bFROM\s+([\w.]+)/i);
-      if (fm) {
-        fromRaw = fm[1];
-        const dotIdx = fromRaw.indexOf('.');
-        fromModel = dotIdx !== -1 ? fromRaw.slice(0, dotIdx) : '';
-        fromView = dotIdx !== -1 ? fromRaw.slice(dotIdx + 1) : fromRaw;
-        fromLine = sourceLine + i;
-        const line = sourceLines[i];
-        const fromKeywordIdx = line.search(/\bFROM\b/i);
-        const afterFrom = line.slice(fromKeywordIdx + 4);
-        const leadingWhitespace = afterFrom.length - afterFrom.trimStart().length;
-
-        fromStartChar = fromKeywordIdx + 4 + leadingWhitespace;
-        fromEndChar = fromStartChar + fromRaw.length;
-        break;
-      }
-    }
-
-    mappings.push({
-      id,
-      idLine: startLine,
-      targetTemplate: targetText.trim(),
-      targetLine,
-      targetPlaceholders,
-      sourceQuery: sourceText,
-      sourceLine,
-      sourceFirstLineOffset,
-      sourceColumns,
-      fromModel,
-      fromView,
-      fromRaw,
-      fromLine,
+    return {
+      fromModel, fromView, fromRaw,
+      fromLine: sourceStartLine + i,
       fromStartChar,
       fromEndChar,
-    });
+    };
   }
 
-  return mappings;
+  return empty;
+}
+
+// ─── AST to ObdaMapping conversion ─────────────────────────────────────────
+
+function blockToMapping(block: MappingBlock): ObdaMapping {
+  // tsPEG uses 1-based line numbers; our contract uses 0-based
+  const idLine = block.idPart.idPos.line - 1;
+  const targetLine = block.targetPart.targetPos.line - 1;
+  const sourceLine = block.sourcePart.sourcePos.line - 1;
+
+  // sourceFirstLineOffset: column where the first source content starts
+  // ("source" keyword + spaces). sourceOffset is captured right before the first source content.
+  const sourceFirstLineOffset = block.sourcePart.sourceOffset.offset;
+
+  // Assemble target text (multi-line joined by space)
+  const targetText = [
+    block.targetPart.firstLine,
+    ...block.targetPart.continuations.map(c => c.value),
+  ].join(' ').trim();
+
+  // Assemble source text (multi-line joined by newline)
+  const sourceFirstLine = block.sourcePart.firstLine;
+  const sourceContLines = block.sourcePart.continuations.map(c => c.value);
+  const sourceLines = [sourceFirstLine, ...sourceContLines];
+  const sourceText = sourceLines.join('\n');
+
+  const sourceLineOffsets: number[] = [sourceFirstLineOffset];
+  for (const cont of block.sourcePart.continuations) {
+    const contOffset = (cont as { offset?: { offset: number } }).offset?.offset;
+    sourceLineOffsets.push(contOffset ?? 0);
+  }
+
+  const targetPlaceholders = extractPlaceholders(targetText);
+  const sourceColumns = parseSelectColumns(sourceText);
+
+  const fromRef = extractFromRef(
+    sourceLines,
+    sourceLine,
+    sourceFirstLineOffset,
+    sourceLineOffsets,
+  );
+
+  return {
+    id: block.idPart.id.trim(),
+    idLine,
+    targetTemplate: targetText,
+    targetLine,
+    targetPlaceholders,
+    sourceQuery: sourceText,
+    sourceLine,
+    sourceFirstLineOffset,
+    sourceLineOffsets,
+    sourceColumns,
+    ...fromRef,
+  };
+}
+
+// ─── Main parser ───────────────────────────────────────────────────────────
+
+export function parseObda(text: string): ObdaMapping[] {
+  const result = parse(text);
+
+  if (!result.ast || result.errs.length > 0) {
+    return [];
+  }
+
+  // Find the mapping section
+  let mapSection: mappingSection | null = null;
+  for (const section of result.ast.sections) {
+    if (section.kind === ASTKinds.mappingSection) {
+      mapSection = section;
+      break;
+    }
+  }
+
+  if (!mapSection) {
+    return [];
+  }
+
+  const blocks: MappingBlock[] = [];
+  if (mapSection.firstBlock) {
+    blocks.push(mapSection.firstBlock);
+  }
+  if (mapSection.restBlocks) {
+    blocks.push(...mapSection.restBlocks);
+  }
+
+  return blocks.map(blockToMapping);
 }

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="c2-cases" version="1">
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_c2_01 suggestion=master_penduduk -->
+  <model name="vm_c2_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_01 AS
+        SELECT nik, nama
+        FROM bansos_db.master_pendudukk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_c2_02 suggestion=eligibility -->
+  <model name="vm_c2_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_02 AS
+        SELECT eligibility_id, nik
+        FROM bansos_db.eligibilitty;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_c2_03 suggestion=master_program_bansos -->
+  <model name="vm_c2_03" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_03 AS
+        SELECT program_id, nama_program
+        FROM bansos_db.master_program_bansoss;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_c2_04 suggestion=master_penerima -->
+  <model name="vm_c2_04" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_04 AS
+        SELECT penerima_id, nik
+        FROM bansos_db.master_penerimaa;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_c2_05 suggestion=master_keluarga -->
+  <model name="vm_c2_05" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_05 AS
+        SELECT no_kk, alamat
+        FROM bansos_db.master_keluraga;
+    ]]></metadata>
+  </model>
+
+</vdb>

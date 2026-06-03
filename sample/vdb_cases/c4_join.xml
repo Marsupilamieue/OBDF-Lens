@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="c4-cases" version="1">
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- EXPECT code=C4 view=v_c4_01 suggestion=left_id -->
+  <model name="vm_c4_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c4_01 AS
+        SELECT left_id, right_id
+        FROM bansos_db.keluarga_rel a
+        JOIN bansos_db.keluarga_rel b ON a.leftid = b.right_id;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C4 view=v_c4_02 suggestion=right_id -->
+  <model name="vm_c4_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c4_02 AS
+        SELECT left_id, right_id
+        FROM bansos_db.keluarga_rel a
+        JOIN bansos_db.keluarga_rel b ON a.left_id = b.rightid;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C4 view=v_c4_03 suggestion=left_id -->
+  <model name="vm_c4_03" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c4_03 AS
+        SELECT left_id, right_id
+        FROM bansos_db.keluarga_rel a
+        JOIN bansos_db.keluarga_rel b ON a.lef_id = b.right_id;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C4 view=v_c4_04 suggestion=right_id -->
+  <model name="vm_c4_04" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c4_04 AS
+        SELECT left_id, right_id
+        FROM bansos_db.keluarga_rel a
+        JOIN bansos_db.keluarga_rel b ON a.left_id = b.rigth_id;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C4 view=v_c4_05 suggestion=left_id -->
+  <model name="vm_c4_05" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c4_05 AS
+        SELECT left_id, right_id
+        FROM bansos_db.keluarga_rel a
+        JOIN bansos_db.keluarga_rel b ON a.left_idd = b.right_id;
+    ]]></metadata>
+  </model>
+
+</vdb>
