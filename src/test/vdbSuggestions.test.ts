@@ -60,7 +60,7 @@ suite('VDB suggestion correctness', () => {
 
     const metaProvider: DbMetaProvider = {
       getTables: async (sourceName) => {
-        if (sourceName === 'bansos_db_c1') {
+        if (sourceName !== 'bansos_db') {
           throw new Error('Connection failed');
         }
         return tables;
@@ -75,14 +75,7 @@ suite('VDB suggestion correctness', () => {
         database: 'test',
         user: 'test',
         password: 'test',
-      },
-      bansos_db_c1: {
-        host: 'localhost',
-        port: 5432,
-        database: 'test',
-        user: 'test',
-        password: 'test',
-      },
+      }
     };
 
     let correct = 0;
