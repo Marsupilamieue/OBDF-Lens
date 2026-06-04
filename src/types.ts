@@ -31,6 +31,8 @@ export interface ObdaMapping {
   idLine: number;
   targetTemplate: string;
   targetLine: number;
+  targetLineOffsets: number[];
+  targetLines: string[];
   targetPlaceholders: string[];  // {nik}, {nama}
   sourceQuery: string;
   sourceLine: number;

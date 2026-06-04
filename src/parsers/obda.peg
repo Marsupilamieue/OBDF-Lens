@@ -51,11 +51,11 @@ mappingId
     := idPos=@ 'mappingId' _SP+ id='[^\r\n]+' _EOL
 
 targetField
-    := targetPos=@ 'target' _SP+ firstLine='[^\r\n]+' _EOL
+    := targetPos=@ 'target' _SP+ targetOffset=@ firstLine='[^\r\n]+' _EOL
        continuations=targetContinuation*
 
 targetContinuation
-    := _INDENT value='[^\r\n]+' _EOL
+    := _INDENT offset=@ value='[^\r\n]+' _EOL
 
 sourceField
     := sourcePos=@ 'source' _SP+ sourceOffset=@ firstLine='[^\r\n]+' _EOL

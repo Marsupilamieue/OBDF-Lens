@@ -158,6 +158,14 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
     ...block.targetPart.continuations.map(c => c.value),
   ].join(' ').trim();
 
+  const targetFirstLineOffset = (block.targetPart as { targetOffset?: { offset: number } })
+    .targetOffset?.offset ?? 0;
+  const targetLineOffsets: number[] = [targetFirstLineOffset];
+  for (const cont of block.targetPart.continuations) {
+    const contOffset = (cont as { offset?: { offset: number } }).offset?.offset;
+    targetLineOffsets.push(contOffset ?? 0);
+  }
+
   // Assemble source text (multi-line joined by newline)
   const sourceFirstLine = block.sourcePart.firstLine;
   const sourceContLines = block.sourcePart.continuations.map(c => c.value);
@@ -185,6 +193,8 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
     idLine,
     targetTemplate: targetText,
     targetLine,
+    targetLineOffsets,
+    targetLines: [block.targetPart.firstLine, ...block.targetPart.continuations.map(c => c.value)],
     targetPlaceholders,
     sourceQuery: sourceText,
     sourceLine,

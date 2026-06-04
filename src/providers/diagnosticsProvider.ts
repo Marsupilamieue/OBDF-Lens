@@ -55,7 +55,7 @@ export class DiagnosticsProvider {
       mappings, vdbData,
       obdaUri.fsPath, vdbUri.fsPath
     );
-    const diagsB = validateCategoryB(mappings, vdbData, obdaUri.fsPath, vdbUri.fsPath);
+    const diagsB = validateCategoryB(mappings, vdbData, obdaUri.fsPath, vdbUri.fsPath, obdaText);
 
     this.obdaCollection.set(obdaUri, [...diagsA, ...diagsB]);
   }

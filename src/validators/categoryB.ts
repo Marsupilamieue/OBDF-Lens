@@ -11,9 +11,11 @@ export function validateCategoryB(
   mappings: ObdaMapping[],
   vdbData: VdbData,
   obdaUri: string,
-  vdbUri: string
+  vdbUri: string,
+  obdaText: string
 ): vscode.Diagnostic[] {
   const diagnostics: vscode.Diagnostic[] = [];
+  const obdaLines = obdaText.split(/\r?\n/);
 
   for (const mapping of mappings) {
     if (!mapping.fromModel || !mapping.fromView) { 
@@ -37,8 +39,7 @@ export function validateCategoryB(
     // B5
     for (const placeholder of mapping.targetPlaceholders) {
       if (!mapping.sourceColumns.some(c => c.toLowerCase() === placeholder.toLowerCase())) {
-        const targetLineIdx = mapping.targetLine;
-        const targetRange = new vscode.Range(targetLineIdx, 0, targetLineIdx, 200);
+        const targetRange = findTargetPlaceholderRange(mapping, placeholder, obdaLines);
         const data: ObdfDiagnosticData = {
           code: 'B5',
           fixes: [{
@@ -170,6 +171,37 @@ export function validateCategoryB(
   }
 
   return diagnostics;
+}
+
+function findTargetPlaceholderRange(
+  mapping: ObdaMapping,
+  placeholder: string,
+  obdaLines: string[]
+): vscode.Range {
+  const lineCount = Math.max(mapping.targetLines.length, 1);
+  const escaped = escapeRegExp(placeholder);
+  const regex = new RegExp(`\\{${escaped}\\}`, 'i');
+  for (let i = 0; i < lineCount; i++) {
+    const lineIdx = mapping.targetLine + i;
+    const lineText = obdaLines[lineIdx];
+    if (lineText === undefined) {
+      continue;
+    }
+    const match = lineText.match(regex);
+    if (match && match.index !== undefined) {
+      const start = match.index + 1;
+      const end = start + placeholder.length;
+      return new vscode.Range(lineIdx, start, lineIdx, end);
+    }
+  }
+
+  const fallbackLine = mapping.targetLine;
+  const fallbackOffset = mapping.targetLineOffsets[0] ?? 0;
+  return new vscode.Range(fallbackLine, fallbackOffset, fallbackLine, fallbackOffset + placeholder.length);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function findColumnLine(
