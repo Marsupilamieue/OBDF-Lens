@@ -24,7 +24,7 @@ target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
             FROM penduduk.v_penduduk
 
-# error A3: view blm dibuat (belum di ter handle karena masih terdetect A1)
+# error A3: view blm dibuat
 mappingId   penduduk-a3
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik

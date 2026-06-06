@@ -89,6 +89,7 @@
     "pg": "^8.13.3"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/pg": "^8.11.11",
@@ -96,6 +97,8 @@
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.3",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
     "tspeg": "^3.3.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"

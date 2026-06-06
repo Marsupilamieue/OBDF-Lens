@@ -1,0 +1,12 @@
+[PrefixDeclaration]
+ex:  http://example.org/
+xsd: http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   view-kosong
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM vm_kosong.v_kosong
+
+]]

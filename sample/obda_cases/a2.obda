@@ -1,0 +1,59 @@
+[PrefixDeclaration]
+ex:  http://example.org/
+xsd: http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   valid-penduduk
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik FROM vm_penduduk.v_penduduk
+
+mappingId   valid-bansos
+target      ex:bansos/{id_penerima} a ex:Bansos .
+source      SELECT id_penerima FROM vm_bansos.v_penerima_bansos
+
+mappingId   valid-pekerjaan
+target      ex:pekerjaan/{id_job} a ex:Pekerjaan .
+source      SELECT id_job FROM vm_pekerjaan.v_karyawan
+
+mappingId   valid-eligibility
+target      ex:eligibility/{eligibility_id} a ex:Eligibility .
+source      SELECT eligibility_id FROM vm_eligibility.v_eligibility
+
+mappingId   valid-penerima
+target      ex:penerima/{penerima_id} a ex:Penerima .
+source      SELECT penerima_id FROM vm_penerima.v_master_penerima
+
+mappingId   valid-keluarga
+target      ex:keluarga/{no_kk} a ex:Keluarga .
+source      SELECT no_kk FROM vm_keluarga.v_master_keluarga
+
+mappingId   typo-model-penduduk
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik FROM vm_pendudukk.v_penduduk
+
+mappingId   typo-model-bansos
+target      ex:bansos/{id_penerima} a ex:Bansos .
+source      SELECT id_penerima FROM vm_bensos.v_penerima_bansos
+
+mappingId   typo-model-pekerjaan
+target      ex:pekerjaan/{id_job} a ex:Pekerjaan .
+source      SELECT id_job FROM vm_pekerjaann.v_karyawan
+
+mappingId   typo-model-eligibility
+target      ex:eligibility/{eligibility_id} a ex:Eligibility .
+source      SELECT eligibility_id FROM vm_eligibilty.v_eligibility
+
+mappingId   typo-model-penerima
+target      ex:penerima/{penerima_id} a ex:Penerima .
+source      SELECT penerima_id FROM vm_penerim.v_master_penerima
+
+mappingId   typo-model-keluarga
+target      ex:keluarga/{no_kk} a ex:Keluarga .
+source      SELECT no_kk FROM vm_keluargaa.v_master_keluarga
+
+mappingId   unknown-model-totally-random
+target      ex:random/{id_random} a ex:Random .
+source      SELECT id_random FROM vm_random_yang_lainnya.v_random_view
+
+]]
