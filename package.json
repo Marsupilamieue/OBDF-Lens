@@ -4,7 +4,7 @@
   "description": "Validate OBDA mappings and Teiid VDB definitions against your physical database that catch errors before runtime.",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.107.0"
   },
   "categories": [
     "Linters"
@@ -93,7 +93,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/pg": "^8.11.11",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.107.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.3",
