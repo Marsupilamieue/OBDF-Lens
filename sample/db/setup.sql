@@ -66,6 +66,19 @@ CREATE TABLE IF NOT EXISTS transaksi_bansos (
   created_at    TIMESTAMP DEFAULT NOW()
 );
 
+-- Untuk test case C2/C3 (vdb_c2, vdb_c3)
+CREATE TABLE IF NOT EXISTS master_penerima (
+  penerima_id   SERIAL PRIMARY KEY,
+  nik           VARCHAR(16) REFERENCES master_penduduk(nik),
+  nama_penerima VARCHAR(100) NOT NULL
+);
+
+-- Untuk test case C4 JOIN (vdb_c4)
+CREATE TABLE IF NOT EXISTS keluarga_rel (
+  left_id   INT PRIMARY KEY,
+  right_id  INT NOT NULL
+);
+
 -- ============================================================
 -- DUMMY DATA
 -- ============================================================
@@ -137,4 +150,17 @@ INSERT INTO transaksi_bansos (eligibility_id, nik, program_id, tanggal, nominal,
   (1, '3273010101850001', 1, '2024-04-15', 900000, 'cair'),
   (2, '3273010202900002', 1, '2024-04-15', 900000, 'cair'),
   (4, '3374010404800004', 2, '2024-02-16', 200000, 'gagal')
+ON CONFLICT DO NOTHING;
+
+-- Keluarga rel (untuk vdb_c4)
+INSERT INTO keluarga_rel (left_id, right_id) VALUES
+  (1, 2),
+  (2, 3),
+  (3, 4)
+ON CONFLICT DO NOTHING;
+
+-- Penerima (untuk vdb_c2 / vdb_c3)
+INSERT INTO master_penerima (nik, nama_penerima) VALUES
+  ('3273010101850001', 'Budi Santoso'),
+  ('3273010202900002', 'Siti Aminah')
 ON CONFLICT DO NOTHING;

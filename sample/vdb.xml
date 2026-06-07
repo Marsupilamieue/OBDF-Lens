@@ -29,7 +29,7 @@
       CREATE VIEW v_eligibility AS
         SELECT eligibility_id, program_id, nik,
               status_eligible, validated_at, validated_by
-        FROM bansos_db.eligibility;
+        FROM bansos_db.eligibilitys;
     ]]></metadata>
   </model>
 
@@ -39,7 +39,7 @@
       CREATE VIEW v_program_bansos AS
         SELECT program_id,
               nama_program AS program_name,
-              CAST(nominal AS BIGINT) AS nominal
+              CAST(nominaln AS BIGINT) AS nominal
         FROM bansos_db.master_program_bansos;
     ]]></metadata>
   </model>

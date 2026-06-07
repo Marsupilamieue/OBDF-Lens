@@ -52,4 +52,23 @@
     ]]></metadata>
   </model>
 
+  <!-- edge: table name totally unrelated → C2 tanpa suggestion -->
+  <!-- EXPECT code=C2 view=v_c2_unknown suggestion=none -->
+  <model name="vm_c2_unknown" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_unknown AS
+        SELECT nik, nama
+        FROM bansos_db.xyz_totally_wrong_table;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c2_ok -->
+  <model name="vm_c2_ok" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c2_ok AS
+        SELECT nik, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
 </vdb>
