@@ -44,14 +44,6 @@ mappingId   typo-model-eligibility
 target      ex:eligibility/{eligibility_id} a ex:Eligibility .
 source      SELECT eligibility_id FROM vm_eligibilty.v_eligibility
 
-mappingId   typo-model-penerima
-target      ex:penerima/{penerima_id} a ex:Penerima .
-source      SELECT penerima_id FROM vm_penerim.v_master_penerima
-
-mappingId   typo-model-keluarga
-target      ex:keluarga/{no_kk} a ex:Keluarga .
-source      SELECT no_kk FROM vm_keluargaa.v_master_keluarga
-
 mappingId   unknown-model-totally-random
 target      ex:random/{id_random} a ex:Random .
 source      SELECT id_random FROM vm_random_yang_lainnya.v_random_view

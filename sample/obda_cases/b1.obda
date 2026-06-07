@@ -10,10 +10,10 @@ source      SELECT jenis, nik FROM vm_penduduk.v_penduduk
 
 mappingId   b1-bansos
 target      ex:bansos/{id_penerima} a ex:Bansos .
-source      SELECT jenis, nik FROM vm_bansos.v_penerima_bansos
+source      SELECT no_bansos, nik FROM vm_bansos.v_penerima_bansos
 
 mappingId   b1-pekerjaan
 target      ex:pekerjaan/{id_job} a ex:Pekerjaan .
-source      SELECT jenis, nik FROM vm_pekerjaan.v_karyawan
+source      SELECT penghasilan, nik FROM vm_pekerjaan.v_karyawan
 
 ]]

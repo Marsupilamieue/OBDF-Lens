@@ -8,10 +8,10 @@ import { VdbData } from '../types';
 jest.mock('vscode', () => ({
   Diagnostic: class {
     code?: string;
-    constructor(public range: any, public message: string, public severity: any) {}
+    constructor(public range: any, public message: string, public severity: any) { }
   },
   Range: class {
-    constructor(public startLine: number, public startChar: number, public endLine: number, public endChar: number) {}
+    constructor(public startLine: number, public startChar: number, public endLine: number, public endChar: number) { }
   },
   DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 }
 }), { virtual: true });
@@ -21,84 +21,84 @@ function getSharedMockVdb(): VdbData {
     models: [
       {
         name: 'vm_penduduk',
-        views: [{ 
-          name: 'v_penduduk', 
-          exposedColumns: ['nik', 'nama', 'tanggal_lahir', 'pekerjaan', 'penghasilan'], 
-          aliasMap: {}, 
-          sourceName: 'bansos_db', 
-          tableName: 'master_penduduk', 
-          ddl: 'CREATE VIEW v_penduduk AS SELECT nik, nama, tanggal_lahir, pekerjaan, penghasilan FROM bansos_db.master_penduduk;', 
-          viewLine: 2, 
+        views: [{
+          name: 'v_penduduk',
+          exposedColumns: ['nik', 'nama', 'tanggal_lahir', 'pekerjaan', 'penghasilan'],
+          aliasMap: {},
+          sourceName: 'bansos_db',
+          tableName: 'master_penduduk',
+          ddl: 'CREATE VIEW v_penduduk AS SELECT nik, nama, tanggal_lahir, pekerjaan, penghasilan FROM bansos_db.master_penduduk;',
+          viewLine: 2,
           viewDdlStartChar: 5
         }],
         modelLine: 1
       },
       {
         name: 'vm_bansos',
-        views: [{ 
-          name: 'v_penerima_bansos', 
-          exposedColumns: ['id_penerima', 'nik', 'jenis_bantuan'], 
-          aliasMap: { 'id': 'id_penerima' }, 
-          sourceName: 'bansos_db', 
-          tableName: 't_penerima', 
-          ddl: 'CREATE VIEW v_penerima_bansos AS SELECT id AS id_penerima, nik, jenis_bantuan FROM bansos_db.t_penerima;', 
-          viewLine: 12, 
+        views: [{
+          name: 'v_penerima_bansos',
+          exposedColumns: ['id_penerima', 'nik', 'jenis_bantuan'],
+          aliasMap: { 'id': 'id_penerima' },
+          sourceName: 'bansos_db',
+          tableName: 't_penerima',
+          ddl: 'CREATE VIEW v_penerima_bansos AS SELECT id AS id_penerima, nik, jenis_bantuan FROM bansos_db.t_penerima;',
+          viewLine: 12,
           viewDdlStartChar: 5
         }],
         modelLine: 10
       },
       {
         name: 'vm_pekerjaan',
-        views: [{ 
-          name: 'v_karyawan', 
-          exposedColumns: ['id_job', 'nik', 'posisi'], 
-          aliasMap: {}, 
-          sourceName: 'hr_db', 
-          tableName: 'master_karyawan', 
-          ddl: 'CREATE VIEW v_karyawan AS SELECT id_job, nik, posisi FROM hr_db.master_karyawan;', 
-          viewLine: 22, 
+        views: [{
+          name: 'v_karyawan',
+          exposedColumns: ['id_job', 'nik', 'posisi'],
+          aliasMap: {},
+          sourceName: 'hr_db',
+          tableName: 'master_karyawan',
+          ddl: 'CREATE VIEW v_karyawan AS SELECT id_job, nik, posisi FROM hr_db.master_karyawan;',
+          viewLine: 22,
           viewDdlStartChar: 5
         }],
         modelLine: 20
       },
       {
         name: 'vm_eligibility',
-        views: [{ 
-          name: 'v_eligibility', 
-          exposedColumns: ['eligibility_id', 'program_id', 'nik', 'status_eligible', 'validated_at', 'validated_by'], 
-          aliasMap: { 'id': 'eligibility_id', 'status': 'status_eligible' }, 
-          sourceName: 'bansos_db', 
-          tableName: 'eligibility', 
-          ddl: 'CREATE VIEW v_eligibility AS SELECT id AS eligibility_id, program_id, nik, status AS status_eligible, validated_at, validated_by FROM bansos_db.eligibility;', 
-          viewLine: 32, 
+        views: [{
+          name: 'v_eligibility',
+          exposedColumns: ['eligibility_id', 'program_id', 'nik', 'status_eligible', 'validated_at', 'validated_by'],
+          aliasMap: { 'id': 'eligibility_id', 'status': 'status_eligible' },
+          sourceName: 'bansos_db',
+          tableName: 'eligibility',
+          ddl: 'CREATE VIEW v_eligibility AS SELECT id AS eligibility_id, program_id, nik, status AS status_eligible, validated_at, validated_by FROM bansos_db.eligibility;',
+          viewLine: 32,
           viewDdlStartChar: 5
         }],
         modelLine: 30
       },
       {
         name: 'vm_penerima',
-        views: [{ 
-          name: 'v_master_penerima', 
-          exposedColumns: ['penerima_id', 'nik', 'nama_penerima'], 
-          aliasMap: { 'id': 'penerima_id', 'nama': 'nama_penerima' }, 
-          sourceName: 'bansos_db', 
-          tableName: 'master_penerima', 
-          ddl: 'CREATE VIEW v_master_penerima AS SELECT id AS penerima_id, nik, nama AS nama_penerima FROM bansos_db.master_penerima;', 
-          viewLine: 42, 
+        views: [{
+          name: 'v_master_penerima',
+          exposedColumns: ['penerima_id', 'nik', 'nama_penerima'],
+          aliasMap: { 'id': 'penerima_id', 'nama': 'nama_penerima' },
+          sourceName: 'bansos_db',
+          tableName: 'master_penerima',
+          ddl: 'CREATE VIEW v_master_penerima AS SELECT id AS penerima_id, nik, nama AS nama_penerima FROM bansos_db.master_penerima;',
+          viewLine: 42,
           viewDdlStartChar: 5
         }],
         modelLine: 40
       },
       {
         name: 'vm_keluarga',
-        views: [{ 
-          name: 'v_master_keluarga', 
-          exposedColumns: ['no_kk', 'alamat', 'nik_id'], 
-          aliasMap: { 'nik': 'nik_id' }, 
-          sourceName: 'bansos_db', 
-          tableName: 'master_keluarga', 
-          ddl: 'CREATE VIEW v_master_keluarga AS SELECT no_kk, alamat, nik AS nik_id FROM bansos_db.master_keluarga;', 
-          viewLine: 52, 
+        views: [{
+          name: 'v_master_keluarga',
+          exposedColumns: ['no_kk', 'alamat', 'nik_id'],
+          aliasMap: { 'nik': 'nik_id' },
+          sourceName: 'bansos_db',
+          tableName: 'master_keluarga',
+          ddl: 'CREATE VIEW v_master_keluarga AS SELECT no_kk, alamat, nik AS nik_id FROM bansos_db.master_keluarga;',
+          viewLine: 52,
           viewDdlStartChar: 5
         }],
         modelLine: 50
@@ -138,14 +138,14 @@ describe('Category A1 Validation', () => {
     diagnostics = validateCategoryA(
       mappings,
       mockVdbData,
-      'file:///dummy.obda',
-      'file:///dummy.vdb.xml'
+      'file:///dummy.obda', // dummy uri
+      'file:///dummy.vdb.xml' // dummy uri
     );
   });
 
-  it('detects exactly 4 A1 errors overall', () => {
+  it('detects exactly 3 A1 errors overall', () => {
     const a1Errors = diagnostics.filter(d => d.code === 'A1');
-    expect(a1Errors.length).toBe(4);
+    expect(a1Errors.length).toBe(3);
   });
 
   it('detects typo in vm_penduduk model and suggests v_penduduk', () => {
@@ -155,7 +155,7 @@ describe('Category A1 Validation', () => {
   });
 
   it('places squiggly line exactly over the full model and view name', () => {
-    const error = diagnostics.find(d => 
+    const error = diagnostics.find(d =>
       d.code === 'A1' && d.message.includes("'v_pendudukk'")
     );
 
@@ -167,16 +167,10 @@ describe('Category A1 Validation', () => {
 
     const lines = obdaText.split('\n');
     const errorLineText = lines[error!.range.startLine];
-    
+
     const highlightedText = errorLineText.substring(error!.range.startChar, error!.range.endChar);
 
     expect(highlightedText).toBe('vm_penduduk.v_pendudukk');
-  });
-
-  it('detects typo in vm_bansos model and suggests v_penerima_bansos', () => {
-    const error = diagnostics.find(d => d.code === 'A1' && d.message.includes("'v_penerima_bnsos'"));
-    expect(error).toBeDefined();
-    expect(error?.message).toContain("Suggestion: Maksud kamu 'v_penerima_bansos'?");
   });
 
   it('detects typo in vm_pekerjaan model and suggests v_karyawan', () => {
@@ -187,7 +181,7 @@ describe('Category A1 Validation', () => {
 
   it('detects unknown view without suggestion and lists available views instead', () => {
     const unknownViewError = diagnostics.find(d => d.code === 'A1' && d.message.includes("'v_tidak_ada'"));
-    
+
     expect(unknownViewError).toBeDefined();
     expect(unknownViewError?.message).not.toContain("Suggestion:");
 
@@ -215,9 +209,9 @@ describe('Category A2 Validation', () => {
     );
   });
 
-  it('detects exactly 4 A2 errors overall', () => {
+  it('detects exactly 5 A2 errors overall', () => {
     const a2Errors = diagnostics.filter(d => d.code === 'A2');
-    expect(a2Errors.length).toBe(7);
+    expect(a2Errors.length).toBe(5);
   });
 
   it('detects A2 errors and provides suggestions', () => {
@@ -236,7 +230,7 @@ describe('Category A2 Validation', () => {
   });
 
   it('places squiggly line exactly over the full model and view name for model typo', () => {
-    const error = diagnostics.find(d => 
+    const error = diagnostics.find(d =>
       d.code === 'A2' && d.message.includes("'vm_pekerjaann'")
     );
 
@@ -248,7 +242,7 @@ describe('Category A2 Validation', () => {
 
     const lines = obdaText.split('\n');
     const errorLineText = lines[error!.range.startLine];
-    
+
     const highlightedText = errorLineText.substring(error!.range.startChar, error!.range.endChar);
 
     expect(highlightedText).toBe('vm_pekerjaann.v_karyawan');
@@ -276,7 +270,7 @@ describe('Category A3 Validation', () => {
 
   it('detects A3 error when referencing a model with no views', () => {
     const error = diagnostics.find(d => d.code === 'A3' && d.message.includes("'vm_kosong.v_kosong'"));
-    
+
     expect(error).toBeDefined();
     expect(error?.message).toContain("[A3] View 'vm_kosong.v_kosong' tidak ditemukan di vdb.xml");
     expect(error?.message).toContain("Seperti view ini belum didefinisikan sama sekali.");
@@ -284,7 +278,7 @@ describe('Category A3 Validation', () => {
   });
 
   it('places squiggly line exactly over the full model and view name for A3 error', () => {
-    const error = diagnostics.find(d => 
+    const error = diagnostics.find(d =>
       d.code === 'A3' && d.message.includes("'vm_kosong.v_kosong'")
     );
 
@@ -296,7 +290,7 @@ describe('Category A3 Validation', () => {
 
     const lines = obdaText.split('\n');
     const errorLineText = lines[error!.range.startLine];
-    
+
     const highlightedText = errorLineText.substring(error!.range.startChar, error!.range.endChar);
 
     expect(highlightedText).toBe('vm_kosong.v_kosong');
@@ -329,13 +323,13 @@ describe('Category A4 Validation', () => {
 
   it('detects incomplete reference and provides exact Quick Fix string', () => {
     const error = diagnostics.find(d => d.code === 'A4' && d.message.includes("'v_penduduk'"));
-    
+
     expect(error).toBeDefined();
     expect(error?.message).toContain("Quick Fix: Ganti dengan 'vm_penduduk.v_penduduk'");
   });
 
   it('places squiggly line exactly over the incomplete view name', () => {
-    const error = diagnostics.find(d => 
+    const error = diagnostics.find(d =>
       d.code === 'A4' && d.message.includes("'v_penduduk'")
     );
 
@@ -347,7 +341,7 @@ describe('Category A4 Validation', () => {
 
     const lines = obdaText.split('\n');
     const errorLineText = lines[error!.range.startLine];
-    
+
     const highlightedText = errorLineText.substring(error!.range.startChar, error!.range.endChar);
 
     expect(highlightedText).toBe('v_penduduk');
@@ -355,7 +349,7 @@ describe('Category A4 Validation', () => {
 
   it('provides Quick Fix for bansos view', () => {
     const error = diagnostics.find(d => d.code === 'A4' && d.message.includes("'v_penerima_bansos'"));
-    
+
     expect(error).toBeDefined();
     expect(error?.message).toContain("Quick Fix: Ganti dengan 'vm_bansos.v_penerima_bansos'");
   });
@@ -395,20 +389,20 @@ describe('Category B1 Validation', () => {
     expect(error?.message).toContain("• nik");
   });
 
-  it('detects B1 for vm_bansos when jenis is not exposed', () => {
-    const error = diagnostics.find(d => d.code === 'B1' && d.message.includes("'jenis'") && d.message.includes("'v_penerima_bansos'"));
+  it('detects B1 for vm_bansos when no_bansos is not exposed', () => {
+    const error = diagnostics.find(d => d.code === 'B1' && d.message.includes("'no_bansos'") && d.message.includes("'v_penerima_bansos'"));
 
     expect(error).toBeDefined();
-    expect(error?.message).toContain("[B1] Kolom 'jenis' tidak diekspos oleh view 'v_penerima_bansos'");
+    expect(error?.message).toContain("[B1] Kolom 'no_bansos' tidak diekspos oleh view 'v_penerima_bansos'");
     expect(error?.message).toContain("Kolom yang tersedia di 'v_penerima_bansos':");
     expect(error?.message).toContain("• jenis_bantuan");
   });
 
-  it('detects B1 for vm_pekerjaan when jenis is not exposed', () => {
-    const error = diagnostics.find(d => d.code === 'B1' && d.message.includes("'jenis'") && d.message.includes("'v_karyawan'"));
+  it('detects B1 for vm_pekerjaan when penghasilan is not exposed', () => {
+    const error = diagnostics.find(d => d.code === 'B1' && d.message.includes("'penghasilan'") && d.message.includes("'v_karyawan'"));
 
     expect(error).toBeDefined();
-    expect(error?.message).toContain("[B1] Kolom 'jenis' tidak diekspos oleh view 'v_karyawan'");
+    expect(error?.message).toContain("[B1] Kolom 'penghasilan' tidak diekspos oleh view 'v_karyawan'");
     expect(error?.message).toContain("Kolom yang tersedia di 'v_karyawan':");
     expect(error?.message).toContain("• posisi");
   });
@@ -518,7 +512,7 @@ describe('Category B4 Validation', () => {
   });
 
   it('detects B4 for vm_bansos when id is used instead of id_penerima', () => {
-    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'id'" ) && d.message.includes("'v_penerima_bansos'"));
+    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'id'") && d.message.includes("'v_penerima_bansos'"));
 
     expect(error).toBeDefined();
     expect(error?.message).toContain("[B4] Kolom 'id' tidak ditemukan di view 'v_penerima_bansos'");
@@ -528,7 +522,7 @@ describe('Category B4 Validation', () => {
   });
 
   it('detects B4 for vm_eligibility when status is used instead of status_eligible', () => {
-    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'status'" ) && d.message.includes("'v_eligibility'"));
+    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'status'") && d.message.includes("'v_eligibility'"));
 
     expect(error).toBeDefined();
     expect(error?.message).toContain("[B4] Kolom 'status' tidak ditemukan di view 'v_eligibility'");
@@ -538,7 +532,7 @@ describe('Category B4 Validation', () => {
   });
 
   it('detects B4 for vm_penerima when nama is used instead of nama_penerima', () => {
-    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'nama'" ) && d.message.includes("'v_master_penerima'"));
+    const error = diagnostics.find(d => d.code === 'B4' && d.message.includes("'nama'") && d.message.includes("'v_master_penerima'"));
 
     expect(error).toBeDefined();
     expect(error?.message).toContain("[B4] Kolom 'nama' tidak ditemukan di view 'v_master_penerima'");

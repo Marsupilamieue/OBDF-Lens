@@ -19,5 +19,4 @@ source      SELECT eligibility_id,
                validated_at,
                validated_by
           FROM vm_eligibility.v_eligibility
-
 ]]
