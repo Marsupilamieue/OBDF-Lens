@@ -306,26 +306,25 @@ export async function validateCategoryC(
         continue;
       }
 
-      const range = new vscode.Range(view.viewLine, 0, view.viewLine, 200);
-
       // C1b: Connection config exists but the actual DB connection fails at runtime.
       let tables: string[];
       try {
         tables = await getTables(view.sourceName, connConfig);
       } catch (err) {
-        const data: ObdfDiagnosticData = { 
-          code: 'C1', 
-          fixes: [] 
-        };
-        const knownSources = Object.keys(connections);
-        const closest = findClosest(view.sourceName, knownSources);
-        let msg = `[C1] Source '${view.sourceName}' tidak bisa dikoneksi\n`;
-        if (closest) {
-          msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
-        }
-        msg += `Error: ${err instanceof Error ? err.message : String(err)}`;
+        const data: ObdfDiagnosticData = { code: 'C1', fixes: [] };
+        const fromIdx = view.ddl.search(/\bFROM\b/i);
+        const c1bRange = findInDdl(view, view.sourceName, fromIdx !== -1 ? fromIdx : 0);
+        const anyErr = err as any;
+        const firstCause = anyErr?.errors?.[0];
+        const causeMsg = firstCause instanceof Error
+          ? firstCause.message
+          : firstCause?.message || (firstCause?.address ? `${firstCause.address}:${firstCause.port}` : null);
+        const errMsg = [anyErr?.code, causeMsg].filter(Boolean).join(' — ')
+          || (err instanceof Error ? err.message : null)
+          || 'Gagal terhubung ke basis data';
+        const msg = `[C1] Source '${view.sourceName}' tidak bisa dikoneksi\nError: ${errMsg}`;
 
-        const diag = new vscode.Diagnostic(range, msg, vscode.DiagnosticSeverity.Error);
+        const diag = new vscode.Diagnostic(c1bRange, msg, vscode.DiagnosticSeverity.Error);
         diag.code = 'C1';
         diag.source = 'OBDF Lens';
         (diag as any).data = data;
