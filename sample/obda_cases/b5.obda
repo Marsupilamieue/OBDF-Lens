@@ -1,0 +1,23 @@
+[PrefixDeclaration]
+ex:  http://example.org/
+xsd: http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   b5-eligibility
+target      ex:kelayakan/{eligibility_id} a ex:Kelayakan ;
+            ex:programId {program_id}^^xsd:string ;
+            ex:nik {nik}^^xsd:string ;
+            ex:status {status_eligible}^^xsd:string ;
+            ex:validatedAt {validated_at}^^xsd:dateTime ;
+            ex:validatedBy {validated_by}^^xsd:string ;
+            ex:catatan {catatan_validasi}^^xsd:string .
+source      SELECT eligibility_id,
+               program_id,
+               nik,
+               status_eligible,
+               validated_at,
+               validated_by
+          FROM vm_eligibility.v_eligibility
+
+]]

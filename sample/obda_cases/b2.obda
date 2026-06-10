@@ -1,0 +1,19 @@
+[PrefixDeclaration]
+ex:  http://example.org/
+xsd: http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   typo-penduduk
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nikk, nama, tanggal_lahir FROM vm_penduduk.v_penduduk
+
+mappingId   typo-bansos
+target      ex:bansos/{id_penerima} a ex:Bansos .
+source      SELECT id_penerim, nik FROM vm_bansos.v_penerima_bansos
+
+mappingId   typo-pekerjaan
+target      ex:pekerjaan/{id_job} a ex:Pekerjaan .
+source      SELECT posis, nik FROM vm_pekerjaan.v_karyawan
+
+]]

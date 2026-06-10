@@ -23,7 +23,7 @@ function asArray<T>(x: T | T[] | undefined): T[] {
   return Array.isArray(x) ? x : [x];
 }
 
-/** 0-based line and column, matching vscode.Position. */
+// 0-based line and column, matching vscode Position
 function posAt(xml: string, index: number): { line: number; col: number } {
   if (index <= 0) { 
     return { line: 0, col: 0 }; 
@@ -47,7 +47,7 @@ function nodeStartIndex(node: unknown): number | undefined {
   return typeof m?.startIndex === 'number' ? m.startIndex : undefined;
 }
 
-/** DDL inside <![CDATA[...]]>; null if malformed. */
+// DDL inside <![CDATA[...]]>; null if malformed.
 function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodyStartAbs: number } | null {
   const open = xml.indexOf(CDATA_BEGIN, searchFrom);
   if (open === -1) { 
@@ -61,6 +61,37 @@ function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodySt
   return { ddl: xml.slice(bodyStartAbs, close), bodyStartAbs };
 }
 
+export interface SelectColumnRef {
+  column: string;
+  tableAlias?: string;
+  display: string;
+}
+
+function splitSelectParts(selectClause: string): string[] {
+  const normalized = selectClause.replace(/\s+/g, ' ').trim();
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of normalized) {
+    if (ch === '(') {
+      depth++;
+      current += ch;
+    } else if (ch === ')') {
+      depth--;
+      current += ch;
+    } else if (ch === ',' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
+  return parts;
+}
+
 function extractRawIdentifier(expr: string): string {
   const trimmed = expr.trim();
   if (/^\w+$/.test(trimmed)) { return trimmed; }
@@ -72,44 +103,18 @@ function extractRawIdentifier(expr: string): string {
   return lastWord ? lastWord[1] : trimmed;
 }
 
-// ambil kolom dari sql select
+// Ambil kolom dari SQL SELECT
 export function parseSelectColumns(
   selectClause: string
 ): { exposedColumns: string[]; aliasMap: Record<string, string> } {
   const exposedColumns: string[] = [];
   const aliasMap: Record<string, string> = {};
 
-  const normalized = selectClause.replace(/\s+/g, ' ').trim();
-
-  const parts: string[] = [];
-  let depth = 0, current = '';
-  for (const ch of normalized) {
-    if (ch === '(') { 
-      depth++; 
-      current += ch; 
-    } else if (ch === ')') {
-      depth--;
-      current += ch; 
-    } else if (ch === ',' && depth === 0) { 
-      parts.push(current.trim()); 
-      current = ''; 
-    } else { 
-      current += ch; 
-    }
-  }
-  if (current.trim()) { 
-    parts.push(current.trim()); 
-  }
-
-  for (const part of parts) {
+  for (const part of splitSelectParts(selectClause)) {
     const asMatch = part.match(/\bAS\s+(\w+)\s*$/i);
     if (asMatch) {
       const alias = asMatch[1];
       const beforeAs = part.slice(0, part.lastIndexOf(asMatch[0])).trim();
-      // extractRawIdentifier handles complex expressions:
-      // "CAST(nominal AS BIGINT)" → "nominal"  (not "BIGINT" — that was the bug)
-      // "COALESCE(penghasilan, 0)" → "penghasilan"
-      // "nama_program" → "nama_program"
       const raw = extractRawIdentifier(beforeAs);
       exposedColumns.push(alias);
       if (raw.toLowerCase() !== alias.toLowerCase()) {
@@ -126,7 +131,7 @@ export function parseSelectColumns(
   return { exposedColumns, aliasMap };
 }
 
- // ambil source dan table
+ // Ambil source dan table
 function parseViewFromClause(ddl: string): { sourceName: string; tableName: string } {
   const fromMatch = ddl.match(/\bFROM\s+([\w]+)\.([\w]+)/i);
   if (fromMatch) {
@@ -136,8 +141,39 @@ function parseViewFromClause(ddl: string): { sourceName: string; tableName: stri
 }
 
 
+// Physical column refs in SELECT, preserving table alias when present.
+export function parseSelectColumnRefs(selectClause: string): SelectColumnRef[] {
+  const refs: SelectColumnRef[] = [];
+  for (const part of splitSelectParts(selectClause)) {
+    if (!part || part === '*') {
+      continue;
+    }
+
+    const asMatch = part.match(/\bAS\s+(\w+)\s*$/i);
+    const expr = asMatch
+      ? part.slice(0, part.lastIndexOf(asMatch[0])).trim()
+      : part;
+
+    const qual = expr.match(/(\w+)\.(\w+)\s*$/);
+    if (qual) {
+      refs.push({
+        tableAlias: qual[1],
+        column: qual[2],
+        display: `${qual[1]}.${qual[2]}`,
+      });
+      continue;
+    }
+
+    const raw = extractRawIdentifier(expr);
+    if (raw && raw !== '*') {
+      refs.push({ column: raw, display: raw });
+    }
+  }
+  return refs;
+}
+
 // Parse a CREATE VIEW DDL statement to extract the SELECT column list.
-function extractSelectClause(ddl: string): string {
+export function extractSelectClauseFromDdl(ddl: string): string {
   const normalized = ddl.replace(/\s+/g, ' ');
   const selectIdx = normalized.search(/\bSELECT\b/i);
   if (selectIdx === -1) { return ''; }
@@ -175,7 +211,7 @@ function parseViewsFromDdl(
     const viewBodyWithSelect = /^\s*SELECT\b/i.test(viewBody)
       ? viewBody
       : 'SELECT ' + viewBody;
-    const selectClause = extractSelectClause(viewBodyWithSelect);
+    const selectClause = extractSelectClauseFromDdl(viewBodyWithSelect);
     const { exposedColumns, aliasMap } = parseSelectColumns(selectClause);
     const { sourceName, tableName } = parseViewFromClause(viewBody);
 

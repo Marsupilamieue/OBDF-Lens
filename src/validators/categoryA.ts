@@ -57,7 +57,7 @@ export function validateCategoryA(
         const diag = new vscode.Diagnostic(
           range,
           `[A4] Format referensi tidak lengkap: '${mapping.fromView}'\nTeiid memerlukan format 'NamaModel.NamaView'\nSuggestion: View '${mapping.fromView}' ditemukan di model '${match.model}'\nQuick Fix: Ganti dengan '${match.model}.${match.view}'`,
-          vscode.DiagnosticSeverity.Warning
+          vscode.DiagnosticSeverity.Error
         );
         diag.code = 'A4';
         diag.source = 'OBDF Lens';
@@ -67,7 +67,7 @@ export function validateCategoryA(
         const diag = new vscode.Diagnostic(
           range,
           `[A4] Format referensi tidak lengkap: '${mapping.fromView}'\nTeiid memerlukan format 'NamaModel.NamaView'\nView '${mapping.fromView}' tidak ditemukan di vdb.xml`,
-          vscode.DiagnosticSeverity.Warning
+          vscode.DiagnosticSeverity.Error
         );
         diag.code = 'A4';
         diag.source = 'OBDF Lens';

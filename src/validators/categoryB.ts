@@ -11,9 +11,11 @@ export function validateCategoryB(
   mappings: ObdaMapping[],
   vdbData: VdbData,
   obdaUri: string,
-  vdbUri: string
+  vdbUri: string,
+  obdaText: string
 ): vscode.Diagnostic[] {
   const diagnostics: vscode.Diagnostic[] = [];
+  const obdaLines = obdaText.split(/\r?\n/);
 
   for (const mapping of mappings) {
     if (!mapping.fromModel || !mapping.fromView) { 
@@ -37,13 +39,12 @@ export function validateCategoryB(
     // B5
     for (const placeholder of mapping.targetPlaceholders) {
       if (!mapping.sourceColumns.some(c => c.toLowerCase() === placeholder.toLowerCase())) {
-        const targetLineIdx = mapping.targetLine;
-        const targetRange = new vscode.Range(targetLineIdx, 0, targetLineIdx, 200);
+        const targetRange = findTargetPlaceholderRange(mapping, placeholder, obdaLines);
         const data: ObdfDiagnosticData = {
           code: 'B5',
           fixes: [{
             title: `Tambah '${placeholder}' ke SELECT source`,
-            edits: [], 
+            edits: buildB5InsertEdits(mapping, placeholder, obdaLines, obdaUri),
           }],
         };
 
@@ -156,9 +157,7 @@ export function validateCategoryB(
       };
       const msg = `[B1] Kolom '${col}' tidak diekspos oleh view '${view.name}'\n` +
         `Kolom ini mungkin ada di tabel fisik tapi tidak di-SELECT di vdb.xml, atau tidak ada sama sekali.\n` +
-        `Suggestion (pilih salah satu):\n` +
-        `  Opsi 1 - Tambah kolom ke view di vdb.xml\n` +
-        `  Opsi 2 - Hapus referensi '${col}' dari .obda\n` +
+
         `Kolom yang tersedia di '${view.name}':\n` +
         view.exposedColumns.map(c => `  • ${c}`).join('\n');
       const diag = new vscode.Diagnostic(range, msg, vscode.DiagnosticSeverity.Error);
@@ -170,6 +169,72 @@ export function validateCategoryB(
   }
 
   return diagnostics;
+}
+
+function findTargetPlaceholderRange(
+  mapping: ObdaMapping,
+  placeholder: string,
+  obdaLines: string[]
+): vscode.Range {
+  const lineCount = Math.max(mapping.targetLines.length, 1);
+  const escaped = escapeRegExp(placeholder);
+  const regex = new RegExp(`\\{${escaped}\\}`, 'i');
+  for (let i = 0; i < lineCount; i++) {
+    const lineIdx = mapping.targetLine + i;
+    const lineText = obdaLines[lineIdx];
+    if (lineText === undefined) {
+      continue;
+    }
+    const match = lineText.match(regex);
+    if (match && match.index !== undefined) {
+      const start = match.index + 1;
+      const end = start + placeholder.length;
+      return new vscode.Range(lineIdx, start, lineIdx, end);
+    }
+  }
+
+  const fallbackLine = mapping.targetLine;
+  const fallbackOffset = mapping.targetLineOffsets[0] ?? 0;
+  return new vscode.Range(fallbackLine, fallbackOffset, fallbackLine, fallbackOffset + placeholder.length);
+}
+
+function buildB5InsertEdits(
+  mapping: ObdaMapping,
+  placeholder: string,
+  obdaLines: string[],
+  obdaUri: string
+): QuickFix['edits'] {
+  const searchLines = Math.max(mapping.sourceLineOffsets.length, 1);
+  const selectRegex = /\bSELECT\b\s+(DISTINCT\b\s+)?/i;
+
+  for (let i = 0; i < searchLines; i++) {
+    const lineIdx = mapping.sourceLine + i;
+    const lineText = obdaLines[lineIdx];
+    if (!lineText) {
+      continue;
+    }
+
+    const match = lineText.match(selectRegex);
+    if (!match || match.index === undefined) {
+      continue;
+    }
+
+    const insertPos = match.index + match[0].length;
+    return [{
+      uri: obdaUri,
+      startLine: lineIdx,
+      startChar: insertPos,
+      endLine: lineIdx,
+      endChar: insertPos,
+      newText: `${placeholder}, `,
+    }];
+  }
+
+  return [];
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function findColumnLine(

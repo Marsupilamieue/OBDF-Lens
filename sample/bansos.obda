@@ -24,7 +24,7 @@ target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
             FROM penduduk.v_penduduk
 
-# error A3: view blm dibuat (belum di ter handle karena masih terdetect A1)
+# error A3: view blm dibuat
 mappingId   penduduk-a3
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
@@ -40,12 +40,6 @@ source      SELECT nik
 mappingId   penduduk-b1
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik, alamat
-            FROM vm_penduduk.v_penduduk
-
-# error B3: butuh koneksi ke DB dulu
-mappingId   penduduk-b3
-target      ex:penduduk/{nik} a ex:Penduduk .
-source      SELECT nik, skor_kredit
             FROM vm_penduduk.v_penduduk
 
 # error B2: typo nama kolom (status_eligble)
@@ -64,7 +58,7 @@ source      SELECT program_id, nama_program
 mappingId   penduduk-b5
 target      ex:penduduk/{nik} a ex:Penduduk ; 
             ex:noKK {no_kk}^^xsd:string .
-source      SELECT nik, nama,                     
+source      SELECT nik, nama                    
             FROM vm_penduduk.v_penduduk
 
 ]]

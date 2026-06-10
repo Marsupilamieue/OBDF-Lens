@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="c3-cases" version="1">
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- master_penduduk: suffix typo + double-char typo -->
+  <!-- EXPECT code=C3 view=v_c3_penduduk_01 suggestion=nik -->
+  <model name="vm_c3_penduduk_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_penduduk_01 AS
+        SELECT nikx, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_c3_penduduk_02 suggestion=tanggal_lahir -->
+  <model name="vm_c3_penduduk_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_penduduk_02 AS
+        SELECT tanggal_lahirr, nik
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- edge: short typo nix → nik (similarity ~67%, below 0.7 threshold → C3 tanpa suggestion) -->
+  <!-- EXPECT code=C3 view=v_c3_edge_nix suggestion=none -->
+  <model name="vm_c3_edge_nix" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_edge_nix AS
+        SELECT nix, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- eligibility: missing letter typo -->
+  <!-- EXPECT code=C3 view=v_c3_eligibility_01 suggestion=status_eligible -->
+  <model name="vm_c3_eligibility_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_eligibility_01 AS
+        SELECT status_eligble, nik
+        FROM bansos_db.eligibility;
+    ]]></metadata>
+  </model>
+
+  <!-- eligibility: concat typo (missing underscore) -->
+  <!-- EXPECT code=C3 view=v_c3_eligibility_02 suggestion=program_id -->
+  <model name="vm_c3_eligibility_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_eligibility_02 AS
+        SELECT programid, nik
+        FROM bansos_db.eligibility;
+    ]]></metadata>
+  </model>
+
+  <!-- master_program_bansos: transposition typo -->
+  <!-- EXPECT code=C3 view=v_c3_program_01 suggestion=nama_program -->
+  <model name="vm_c3_program_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_program_01 AS
+        SELECT nama_progam, program_id
+        FROM bansos_db.master_program_bansos;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_c3_program_02 suggestion=nominal -->
+  <model name="vm_c3_program_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_program_02 AS
+        SELECT nomnal, program_id
+        FROM bansos_db.master_program_bansos;
+    ]]></metadata>
+  </model>
+
+  <!-- master_penerima: concat typo + double-char typo -->
+  <!-- EXPECT code=C3 view=v_c3_penerima_01 suggestion=penerima_id -->
+  <model name="vm_c3_penerima_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_penerima_01 AS
+        SELECT penerimaid, nik
+        FROM bansos_db.master_penerima;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_c3_penerima_02 suggestion=nik -->
+  <model name="vm_c3_penerima_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_penerima_02 AS
+        SELECT nikk, penerima_id
+        FROM bansos_db.master_penerima;
+    ]]></metadata>
+  </model>
+
+  <!-- master_keluarga: suffix typo + concat typo -->
+  <!-- EXPECT code=C3 view=v_c3_keluarga_01 suggestion=no_kk -->
+  <model name="vm_c3_keluarga_01" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_keluarga_01 AS
+        SELECT no_kkk, alamat
+        FROM bansos_db.master_keluarga;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_c3_keluarga_02 suggestion=wilayah_id -->
+  <model name="vm_c3_keluarga_02" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_keluarga_02 AS
+        SELECT wilaya_id, no_kk
+        FROM bansos_db.master_keluarga;
+    ]]></metadata>
+  </model>
+
+  <!-- edge: column name totally unrelated → C3 tanpa suggestion -->
+  <!-- EXPECT code=C3 view=v_c3_unknown_col suggestion=none -->
+  <model name="vm_c3_unknown_col" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_unknown_col AS
+        SELECT qwerty_col, nik
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- PRD-like abbreviation typo (tgl_lahir); skor kemiripan di bawah 70% -->
+  <!-- EXPECT code=C3 view=v_c3_prd_tgl suggestion=none -->
+  <model name="vm_c3_prd_tgl" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_prd_tgl AS
+        SELECT nik, tgl_lahir
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- positive: one clean view per table -->
+  <!-- EXPECT_POSITIVE view=v_c3_ok_penduduk -->
+  <model name="vm_c3_ok_penduduk" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_ok_penduduk AS
+        SELECT nik, nama, tanggal_lahir, pekerjaan, penghasilan
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c3_ok_eligibility -->
+  <model name="vm_c3_ok_eligibility" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_ok_eligibility AS
+        SELECT eligibility_id, program_id, nik, status_eligible, validated_at, validated_by
+        FROM bansos_db.eligibility;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c3_ok_program -->
+  <model name="vm_c3_ok_program" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_ok_program AS
+        SELECT program_id, nama_program, nominal
+        FROM bansos_db.master_program_bansos;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c3_ok_penerima -->
+  <model name="vm_c3_ok_penerima" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_ok_penerima AS
+        SELECT penerima_id, nik, nama_penerima
+        FROM bansos_db.master_penerima;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c3_ok_keluarga -->
+  <model name="vm_c3_ok_keluarga" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c3_ok_keluarga AS
+        SELECT no_kk, wilayah_id, alamat
+        FROM bansos_db.master_keluarga;
+    ]]></metadata>
+  </model>
+
+</vdb>

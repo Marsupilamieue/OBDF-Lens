@@ -38,10 +38,10 @@
 * mappingId
 *     := idPos=@ 'mappingId' _SP+ id='[^\r\n]+' _EOL
 * targetField
-*     := targetPos=@ 'target' _SP+ firstLine='[^\r\n]+' _EOL
+*     := targetPos=@ 'target' _SP+ targetOffset=@ firstLine='[^\r\n]+' _EOL
 *        continuations=targetContinuation*
 * targetContinuation
-*     := _INDENT value='[^\r\n]+' _EOL
+*     := _INDENT offset=@ value='[^\r\n]+' _EOL
 * sourceField
 *     := sourcePos=@ 'source' _SP+ sourceOffset=@ firstLine='[^\r\n]+' _EOL
 *        continuations=sourceContinuation*
@@ -155,11 +155,13 @@ export interface mappingId {
 export interface targetField {
     kind: ASTKinds.targetField;
     targetPos: PosInfo;
+    targetOffset: PosInfo;
     firstLine: string;
     continuations: targetContinuation[];
 }
 export interface targetContinuation {
     kind: ASTKinds.targetContinuation;
+    offset: PosInfo;
     value: string;
 }
 export interface sourceField {
@@ -414,6 +416,7 @@ export class Parser {
         return this.run<targetField>($$dpth,
             () => {
                 let $scope$targetPos: Nullable<PosInfo>;
+                let $scope$targetOffset: Nullable<PosInfo>;
                 let $scope$firstLine: Nullable<string>;
                 let $scope$continuations: Nullable<targetContinuation[]>;
                 let $$res: Nullable<targetField> = null;
@@ -421,11 +424,12 @@ export class Parser {
                     && ($scope$targetPos = this.mark()) !== null
                     && this.regexAccept(String.raw`(?:target)`, "", $$dpth + 1, $$cr) !== null
                     && this.loopPlus<_SP>(() => this.match_SP($$dpth + 1, $$cr)) !== null
+                    && ($scope$targetOffset = this.mark()) !== null
                     && ($scope$firstLine = this.regexAccept(String.raw`(?:[^\r\n]+)`, "", $$dpth + 1, $$cr)) !== null
                     && this.match_EOL($$dpth + 1, $$cr) !== null
                     && ($scope$continuations = this.loop<targetContinuation>(() => this.matchtargetContinuation($$dpth + 1, $$cr), 0, -1)) !== null
                 ) {
-                    $$res = {kind: ASTKinds.targetField, targetPos: $scope$targetPos, firstLine: $scope$firstLine, continuations: $scope$continuations};
+                    $$res = {kind: ASTKinds.targetField, targetPos: $scope$targetPos, targetOffset: $scope$targetOffset, firstLine: $scope$firstLine, continuations: $scope$continuations};
                 }
                 return $$res;
             });
@@ -433,14 +437,16 @@ export class Parser {
     public matchtargetContinuation($$dpth: number, $$cr?: ErrorTracker): Nullable<targetContinuation> {
         return this.run<targetContinuation>($$dpth,
             () => {
+                let $scope$offset: Nullable<PosInfo>;
                 let $scope$value: Nullable<string>;
                 let $$res: Nullable<targetContinuation> = null;
                 if (true
                     && this.match_INDENT($$dpth + 1, $$cr) !== null
+                    && ($scope$offset = this.mark()) !== null
                     && ($scope$value = this.regexAccept(String.raw`(?:[^\r\n]+)`, "", $$dpth + 1, $$cr)) !== null
                     && this.match_EOL($$dpth + 1, $$cr) !== null
                 ) {
-                    $$res = {kind: ASTKinds.targetContinuation, value: $scope$value};
+                    $$res = {kind: ASTKinds.targetContinuation, offset: $scope$offset, value: $scope$value};
                 }
                 return $$res;
             });

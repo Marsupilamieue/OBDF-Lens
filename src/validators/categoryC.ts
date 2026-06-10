@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import { VdbData, VdbView, ObdfDiagnosticData, QuickFix } from '../types';
 import { findClosest } from '../utils/similarity';
+import { extractSelectClauseFromDdl, parseSelectColumnRefs, SelectColumnRef } from '../parsers/vdbParser';
+
 function findInDdl(view: VdbView, identifier: string, startFrom: number = 0): vscode.Range {
-  const regex = new RegExp(`\\b${identifier}\\b`, 'i');
+  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`\\b${escaped}\\b`, 'i');
   const match = view.ddl.slice(startFrom).match(regex);
   if (!match || match.index === undefined) {
     return new vscode.Range(view.viewLine, 0, view.viewLine, 200);
@@ -72,6 +75,126 @@ function pct(score: number): string {
   return Math.round(score * 100) + '%';
 }
 
+/** Map SQL table alias (lowercase) → physical table name from FROM/JOIN clauses. */
+function parseAliasToTableMap(ddl: string): Map<string, string> {
+  const map = new Map<string, string>();
+
+  const fromMatch = ddl.match(/\bFROM\s+[\w]+\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/i);
+  if (fromMatch) {
+    const tableName = fromMatch[1];
+    const alias = (fromMatch[2] ?? tableName).toLowerCase();
+    map.set(alias, tableName);
+  }
+
+  const joinRegex = /\bJOIN\s+[\w]+\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/gi;
+  let joinMatch: RegExpExecArray | null;
+  while ((joinMatch = joinRegex.exec(ddl)) !== null) {
+    const tableName = joinMatch[1];
+    const alias = (joinMatch[2] ?? tableName).toLowerCase();
+    map.set(alias, tableName);
+  }
+
+  return map;
+}
+
+interface JoinConditionRef {
+  alias: string;
+  column: string;
+  index: number;
+}
+
+function parseJoinConditions(ddl: string): JoinConditionRef[] {
+  const refs: JoinConditionRef[] = [];
+  const onRegex = /\bON\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/gi;
+  let onMatch: RegExpExecArray | null;
+  while ((onMatch = onRegex.exec(ddl)) !== null) {
+    refs.push(
+      { alias: onMatch[1], column: onMatch[2], index: onMatch.index ?? 0 },
+      { alias: onMatch[3], column: onMatch[4], index: onMatch.index ?? 0 },
+    );
+  }
+  return refs;
+}
+
+function reportJoinColumnError(
+  view: VdbView,
+  vdbUri: string,
+  joinCol: string,
+  tableName: string,
+  tableColumns: string[],
+  joinIndex: number,
+  diagnostics: vscode.Diagnostic[],
+): void {
+  const closest = findClosest(joinCol, tableColumns);
+  const c4Range = findInDdl(view, joinCol, joinIndex);
+
+  const data: ObdfDiagnosticData = {
+    code: 'C4',
+    fixes: closest ? [{
+      title: `Ganti '${joinCol}' → '${closest.match}' di JOIN condition`,
+      edits: [toFixEdit(vdbUri, c4Range, closest.match)],
+    }] : [],
+  };
+
+  let msg = `[C4] Kolom '${joinCol}' tidak ditemukan di tabel '${tableName}' (JOIN condition)\n`;
+  msg += `Source: ${view.sourceName}.${tableName} (Tabel ditemukan)\n`;
+  if (closest) {
+    msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
+  }
+  msg += `Kolom yang tersedia di '${tableName}':\n`;
+  msg += tableColumns.map(c => c === closest?.match
+    ? `  • ${c}   ← paling mirip dengan '${joinCol}'`
+    : `  • ${c}`
+  ).join('\n');
+
+  const diag = new vscode.Diagnostic(c4Range, msg, vscode.DiagnosticSeverity.Error);
+  diag.code = 'C4';
+  diag.source = 'OBDF Lens';
+  (diag as any).data = data;
+  diagnostics.push(diag);
+}
+
+function reportSelectColumnError(
+  view: VdbView,
+  vdbUri: string,
+  ref: SelectColumnRef,
+  tableName: string,
+  tableColumns: string[],
+  diagnostics: vscode.Diagnostic[],
+): void {
+  const closest = findClosest(ref.column, tableColumns);
+  const selectIdx = view.ddl.search(/\bSELECT\b/i);
+  const c3Range = findInDdl(view, ref.display, selectIdx !== -1 ? selectIdx : 0);
+  const replacement = closest
+    ? (ref.tableAlias ? `${ref.tableAlias}.${closest.match}` : closest.match)
+    : undefined;
+
+  const data: ObdfDiagnosticData = {
+    code: 'C3',
+    fixes: replacement ? [{
+      title: `Ganti kolom '${ref.display}' → '${replacement}'`,
+      edits: [toFixEdit(vdbUri, c3Range, replacement)],
+    }] : [],
+  };
+
+  let msg = `[C3] Kolom '${ref.display}' tidak ditemukan di tabel '${tableName}'\n`;
+  msg += `Source: ${view.sourceName}.${tableName} (Tabel ditemukan)\n`;
+  if (closest) {
+    msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
+  }
+  msg += `Kolom yang tersedia di '${tableName}':\n`;
+  msg += tableColumns.map(c => c === closest?.match
+    ? `  • ${c}   <- paling mirip dengan '${ref.display}'`
+    : `  • ${c}`
+  ).join('\n');
+
+  const diag = new vscode.Diagnostic(c3Range, msg, vscode.DiagnosticSeverity.Error);
+  diag.code = 'C3';
+  diag.source = 'OBDF Lens';
+  (diag as any).data = data;
+  diagnostics.push(diag);
+}
+
 /** Convert a vscode.Range to the flat FixEdit shape expected by types.ts. */
 function toFixEdit(uri: string, range: vscode.Range, newText: string) {
   return {
@@ -99,7 +222,18 @@ export async function validateCategoryC(
   const metaProvider = options?.metaProvider;
 
   if (Object.keys(connections).length === 0) {
-    return diagnostics; 
+    const firstView = vdbData.models.flatMap((m) => m.views)[0];
+    const range = firstView
+      ? new vscode.Range(firstView.viewLine, 0, firstView.viewLine, 200)
+      : new vscode.Range(0, 0, 0, 200);
+    const diag = new vscode.Diagnostic(
+      range,
+      '[OBDF] Konfigurasi obdf-lens.connections belum diset — validasi vdb.xml ke DB fisik (C1–C4) dilewati.',
+      vscode.DiagnosticSeverity.Warning
+    );
+    diag.source = 'OBDF Lens';
+    diagnostics.push(diag);
+    return diagnostics;
   }
 
   const tableCache: Record<string, string[]> = {};   
@@ -172,26 +306,25 @@ export async function validateCategoryC(
         continue;
       }
 
-      const range = new vscode.Range(view.viewLine, 0, view.viewLine, 200);
-
       // C1b: Connection config exists but the actual DB connection fails at runtime.
       let tables: string[];
       try {
         tables = await getTables(view.sourceName, connConfig);
       } catch (err) {
-        const data: ObdfDiagnosticData = { 
-          code: 'C1', 
-          fixes: [] 
-        };
-        const knownSources = Object.keys(connections);
-        const closest = findClosest(view.sourceName, knownSources);
-        let msg = `[C1] Source '${view.sourceName}' tidak bisa dikoneksi\n`;
-        if (closest) {
-          msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
-        }
-        msg += `Error: ${err instanceof Error ? err.message : String(err)}`;
+        const data: ObdfDiagnosticData = { code: 'C1', fixes: [] };
+        const fromIdx = view.ddl.search(/\bFROM\b/i);
+        const c1bRange = findInDdl(view, view.sourceName, fromIdx !== -1 ? fromIdx : 0);
+        const anyErr = err as any;
+        const firstCause = anyErr?.errors?.[0];
+        const causeMsg = firstCause instanceof Error
+          ? firstCause.message
+          : firstCause?.message || (firstCause?.address ? `${firstCause.address}:${firstCause.port}` : null);
+        const errMsg = [anyErr?.code, causeMsg].filter(Boolean).join(' — ')
+          || (err instanceof Error ? err.message : null)
+          || 'Gagal terhubung ke basis data';
+        const msg = `[C1] Source '${view.sourceName}' tidak bisa dikoneksi\nError: ${errMsg}`;
 
-        const diag = new vscode.Diagnostic(range, msg, vscode.DiagnosticSeverity.Error);
+        const diag = new vscode.Diagnostic(c1bRange, msg, vscode.DiagnosticSeverity.Error);
         diag.code = 'C1';
         diag.source = 'OBDF Lens';
         (diag as any).data = data;
@@ -241,94 +374,50 @@ export async function validateCategoryC(
         continue; 
       }
 
-      // C3: Check SELECT columns exist in physical table
-      for (const col of view.exposedColumns) {
-        const rawCol = Object.entries(view.aliasMap).find(([, alias]) =>
-          alias.toLowerCase() === col.toLowerCase()
-        )?.[0] ?? col;
+      const aliasToTable = parseAliasToTableMap(view.ddl);
+      const selectRefs = parseSelectColumnRefs(extractSelectClauseFromDdl(view.ddl));
 
-        if (rawCol === '*') { 
-          continue; 
+      // C3: Check SELECT columns against the physical table for each alias (or FROM table)
+      for (const ref of selectRefs) {
+        const tableName = ref.tableAlias
+          ? aliasToTable.get(ref.tableAlias.toLowerCase()) ?? view.tableName
+          : view.tableName;
+
+        const tableColumns = tableName === view.tableName
+          ? dbColumns
+          : await getColumns(view.sourceName, tableName, connConfig);
+        if (tableColumns.length === 0) {
+          continue;
         }
 
-        const exists = dbColumns.some(c => c.toLowerCase() === rawCol.toLowerCase());
+        const exists = tableColumns.some(c => c.toLowerCase() === ref.column.toLowerCase());
         if (!exists) {
-          const closest = findClosest(rawCol, dbColumns);
-          const selectIdx = view.ddl.search(/\bSELECT\b/i);
-          const c3Range = findInDdl(view, rawCol, selectIdx !== -1 ? selectIdx : 0);
-
-          const data: ObdfDiagnosticData = {
-            code: 'C3',
-            fixes: closest ? [{
-              title: `Ganti kolom '${rawCol}' → '${closest.match}'`,
-              edits: [toFixEdit(vdbUri, c3Range, closest.match)],
-            }] : [],
-          };
-
-          let msg = `[C3] Kolom '${rawCol}' tidak ditemukan di tabel '${view.tableName}'\n`;
-          msg += `Source: ${view.sourceName}.${view.tableName} (Tabel ditemukan)\n`;
-          if (closest) {
-            msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
-          }
-          msg += `Kolom yang tersedia di '${view.tableName}':\n`;
-          msg += dbColumns.map(c => c === closest?.match
-            ? `  • ${c}   <- paling mirip dengan '${rawCol}'`
-            : `  • ${c}`
-          ).join('\n');
-
-          const diag = new vscode.Diagnostic(
-            c3Range,
-            msg,
-            vscode.DiagnosticSeverity.Error
+          reportSelectColumnError(
+            view, vdbUri, ref, tableName, tableColumns, diagnostics,
           );
-          diag.code = 'C3';
-          diag.source = 'OBDF Lens';
-          (diag as any).data = data;
-          diagnostics.push(diag);
         }
       }
 
-      // C4: Check JOIN ON clause columns
-      const joinMatches = [...view.ddl.matchAll(/JOIN\s+\w+\.\w+\s+\w+\s+ON\s+\w+\.(\w+)\s*=\s*\w+\.(\w+)/gi)];
-      for (const jm of joinMatches) {
-        const leftCol = jm[1];
-        const rightCol = jm[2];
+      // C4: Check JOIN ON columns against the physical table for each alias
+      const joinRefs = parseJoinConditions(view.ddl);
+      for (const ref of joinRefs) {
+        const tableName = aliasToTable.get(ref.alias.toLowerCase());
+        if (!tableName) {
+          continue;
+        }
 
-        for (const joinCol of [leftCol, rightCol]) {
-          const exists = dbColumns.some(c => c.toLowerCase() === joinCol.toLowerCase());
-          if (!exists) {
-            const closest = findClosest(joinCol, dbColumns);
-            const c4Range = findInDdl(view, joinCol, jm.index ?? 0);
+        const tableColumns = tableName === view.tableName
+          ? dbColumns
+          : await getColumns(view.sourceName, tableName, connConfig);
+        if (tableColumns.length === 0) {
+          continue;
+        }
 
-            const data: ObdfDiagnosticData = {
-              code: 'C4',
-              fixes: closest ? [{
-                title: `Ganti '${joinCol}' → '${closest.match}' di JOIN condition`,
-                edits: [toFixEdit(vdbUri, c4Range, closest.match)],
-              }] : [],
-            };
-
-            let msg = `[C4] Kolom '${joinCol}' tidak ditemukan di tabel '${view.tableName}' (JOIN condition)\n`;
-            msg += `Source: ${view.sourceName}.${view.tableName} (Tabel ditemukan)\n`;
-            if (closest) {
-              msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
-            }
-            msg += `Kolom yang tersedia di '${view.tableName}':\n`;
-            msg += dbColumns.map(c => c === closest?.match
-              ? `  • ${c}   ← paling mirip dengan '${joinCol}'`
-              : `  • ${c}`
-            ).join('\n');
-
-            const diag = new vscode.Diagnostic(
-              c4Range,
-              msg,
-              vscode.DiagnosticSeverity.Error
-            );
-            diag.code = 'C4';
-            diag.source = 'OBDF Lens';
-            (diag as any).data = data;
-            diagnostics.push(diag);
-          }
+        const exists = tableColumns.some(c => c.toLowerCase() === ref.column.toLowerCase());
+        if (!exists) {
+          reportJoinColumnError(
+            view, vdbUri, ref.column, tableName, tableColumns, ref.index, diagnostics,
+          );
         }
       }
     }

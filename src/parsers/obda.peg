@@ -1,4 +1,4 @@
-// ─── OBDA Grammar for tsPEG ─────────────────────────────────────────────────
+// ─── OBDA Grammar for tsPEG
 // Parses the Ontop OBDA mapping file format.
 // Sections: [PrefixDeclaration] and [MappingDeclaration] @collection [[...]]
 
@@ -9,7 +9,7 @@ section
     := prefixSection
      | mappingSection
 
-// ─── Prefix Section ─────────────────────────────────────────────────────────
+// ─── Prefix Section
 
 prefixSection
     := header=prefixHeader entries=prefixEntry*
@@ -22,9 +22,9 @@ prefixEntry
      | _WS name=':' _HTAB+ iri='[^\r\n]+' _EOL
      | _BLANKLINE
 
-// ─── Mapping Section ────────────────────────────────────────────────────────
+// ─── Mapping Section
 // First block can appear without a preceding blank line.
-// Subsequent blocks MUST be separated by at least one blank line.
+// Subsequent blocks must be separated by at least one blank line.
 
 mappingSection
     := _WS '\[MappingDeclaration\]' _SP '@collection' _SP '\[\[' _EOL
@@ -45,17 +45,17 @@ commentOrBlank
 commentLine
     := '[#;][^\r\n]*' _EOL
 
-// ─── Mapping Fields ─────────────────────────────────────────────────────────
+// ─── Mapping Fields 
 
 mappingId
     := idPos=@ 'mappingId' _SP+ id='[^\r\n]+' _EOL
 
 targetField
-    := targetPos=@ 'target' _SP+ firstLine='[^\r\n]+' _EOL
+    := targetPos=@ 'target' _SP+ targetOffset=@ firstLine='[^\r\n]+' _EOL
        continuations=targetContinuation*
 
 targetContinuation
-    := _INDENT value='[^\r\n]+' _EOL
+    := _INDENT offset=@ value='[^\r\n]+' _EOL
 
 sourceField
     := sourcePos=@ 'source' _SP+ sourceOffset=@ firstLine='[^\r\n]+' _EOL
@@ -64,7 +64,7 @@ sourceField
 sourceContinuation
     := _INDENT offset=@ value='[^\r\n]+' _EOL
 
-// ─── Whitespace Helpers ─────────────────────────────────────────────────────
+// ─── Whitespace Helpers
 
 _WS       := '[ \t\r\n]*'
 _SP       := '[ \t]'

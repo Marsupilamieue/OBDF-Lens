@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="c1-cases" version="1">
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_c1_bad suggestion=bansos_db -->
+  <model name="vm_c1_bad" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c1_bad AS
+        SELECT nik, nama
+        FROM bansos_dbs.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- edge: source name totally unrelated → no suggestion (below 0.7 threshold) -->
+  <!-- EXPECT code=C1 view=v_c1_unknown suggestion=none -->
+  <model name="vm_c1_unknown" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c1_unknown AS
+        SELECT nik, nama
+        FROM totally_unknown_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_c1_ok -->
+  <model name="vm_c1_ok" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_c1_ok AS
+        SELECT nik, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+</vdb>
