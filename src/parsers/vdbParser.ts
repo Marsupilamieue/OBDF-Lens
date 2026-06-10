@@ -23,7 +23,7 @@ function asArray<T>(x: T | T[] | undefined): T[] {
   return Array.isArray(x) ? x : [x];
 }
 
-/** 0-based line and column, matching vscode.Position. */
+// 0-based line and column, matching vscode Position
 function posAt(xml: string, index: number): { line: number; col: number } {
   if (index <= 0) { 
     return { line: 0, col: 0 }; 
@@ -47,7 +47,7 @@ function nodeStartIndex(node: unknown): number | undefined {
   return typeof m?.startIndex === 'number' ? m.startIndex : undefined;
 }
 
-/** DDL inside <![CDATA[...]]>; null if malformed. */
+// DDL inside <![CDATA[...]]>; null if malformed.
 function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodyStartAbs: number } | null {
   const open = xml.indexOf(CDATA_BEGIN, searchFrom);
   if (open === -1) { 
@@ -103,7 +103,7 @@ function extractRawIdentifier(expr: string): string {
   return lastWord ? lastWord[1] : trimmed;
 }
 
-// ambil kolom dari sql select
+// Ambil kolom dari SQL SELECT
 export function parseSelectColumns(
   selectClause: string
 ): { exposedColumns: string[]; aliasMap: Record<string, string> } {
@@ -115,10 +115,6 @@ export function parseSelectColumns(
     if (asMatch) {
       const alias = asMatch[1];
       const beforeAs = part.slice(0, part.lastIndexOf(asMatch[0])).trim();
-      // extractRawIdentifier handles complex expressions:
-      // "CAST(nominal AS BIGINT)" → "nominal"  (not "BIGINT" — that was the bug)
-      // "COALESCE(penghasilan, 0)" → "penghasilan"
-      // "nama_program" → "nama_program"
       const raw = extractRawIdentifier(beforeAs);
       exposedColumns.push(alias);
       if (raw.toLowerCase() !== alias.toLowerCase()) {
@@ -135,7 +131,7 @@ export function parseSelectColumns(
   return { exposedColumns, aliasMap };
 }
 
- // ambil source dan table
+ // Ambil source dan table
 function parseViewFromClause(ddl: string): { sourceName: string; tableName: string } {
   const fromMatch = ddl.match(/\bFROM\s+([\w]+)\.([\w]+)/i);
   if (fromMatch) {
@@ -145,7 +141,7 @@ function parseViewFromClause(ddl: string): { sourceName: string; tableName: stri
 }
 
 
-/** Physical column refs in SELECT, preserving table alias when present (e.g. w.provinsi). */
+// Physical column refs in SELECT, preserving table alias when present.
 export function parseSelectColumnRefs(selectClause: string): SelectColumnRef[] {
   const refs: SelectColumnRef[] = [];
   for (const part of splitSelectParts(selectClause)) {

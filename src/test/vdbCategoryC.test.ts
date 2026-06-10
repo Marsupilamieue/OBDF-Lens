@@ -74,7 +74,7 @@ async function assertCaseFile(vdbPath: string): Promise<void> {
         failures.push(`${viewLabel}: ${msg}`);
         logFail(label, viewLabel, msg);
       } else {
-        logPass(label, viewLabel, '→ (no suggestion, below threshold)');
+        logPass(label, viewLabel, '(no suggestion, below threshold)');
       }
     } else if (actual !== exp.suggestion) {
       const msg = `expected '${exp.suggestion}', got '${actual ?? 'none'}'`;
@@ -112,7 +112,7 @@ async function assertCaseFile(vdbPath: string): Promise<void> {
   assert.strictEqual(failures.length, 0, failures.join('\n'));
 }
 
-suite('Category C — vdb.xml → Physical DB', () => {
+suite('[Category C] vdb.xml to Physical DB', () => {
 
   const caseFiles = discoverVdbCaseFiles();
 

@@ -10,7 +10,7 @@ DB_HOST=${2:-localhost}
 DB_PORT=${3:-5432}
 DB_NAME="bansos"
 
-echo "🔧 Setting up database '$DB_NAME' on $DB_HOST:$DB_PORT as user '$DB_USER'..."
+echo "Setting up database '$DB_NAME' on $DB_HOST:$DB_PORT as user '$DB_USER'..."
 
 # Buat database kalau belum ada
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -tc \
@@ -21,9 +21,9 @@ psql -h $DB_HOST -p $DB_PORT -U $DB_USER -tc \
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$(dirname "$0")/setup.sql"
 
 echo ""
-echo "✅ Done! Database '$DB_NAME' siap."
+echo "Database '$DB_NAME' telah dibuat."
 echo ""
-echo "📋 Tambahkan setting berikut ke VSCode (settings.json):"
+echo "Tambahkan setting berikut ke VSCode (settings.json):"
 echo ""
 echo '  "obdf-lens.connections": {'
 echo "    \"bansos_db\": {"

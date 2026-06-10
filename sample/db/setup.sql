@@ -2,14 +2,7 @@
 -- OBDF Lens - Database Setup Script
 -- Database: bansos
 -- ============================================================
-
--- Buat database (jalankan sebagai superuser)
--- CREATE DATABASE bansos;
--- \c bansos
-
--- ============================================================
 -- SCHEMA
--- ============================================================
 
 CREATE TABLE IF NOT EXISTS master_penduduk (
   nik           VARCHAR(16) PRIMARY KEY,
