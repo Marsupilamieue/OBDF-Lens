@@ -62,7 +62,7 @@ export function validateCategoryB(
       }
     }
 
-    // B1 B2 B3 B4 cek kolom dengan yang exposed dari vdb
+    // B1 B2 B4 cek kolom dengan yang exposed dari vdb
     for (const col of mapping.sourceColumns) {
       if (col === '*') { 
         continue; 
