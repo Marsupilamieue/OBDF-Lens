@@ -2,8 +2,8 @@ export interface VdbView {
   name: string;
   exposedColumns: string[];
   aliasMap: Record<string, string>;
-  sourceName: string;  // seperti bansos_db
-  tableName: string;   // seperti master_penduduk
+  sourceName: string;
+  tableName: string; 
   ddl: string;
   viewLine: number;
   viewDdlStartChar: number;
@@ -41,7 +41,7 @@ export interface ObdaMapping {
   sourceColumns: string[];      
   fromModel: string;             // vm_penduduk
   fromView: string;              // v_penduduk
-  fromRaw: string;               // vm_penduduk.v_penduduk / v_penduduk
+  fromRaw: string;               // vm_penduduk.v_penduduk
   fromLine: number;
   fromStartChar: number;
   fromEndChar: number;

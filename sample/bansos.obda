@@ -7,22 +7,20 @@ xsd:	http://www.w3.org/2001/XMLSchema#
 
 mappingId   penduduk-ok
 target      ex:penduduk/{nik} a ex:Penduduk ;
-              ex:nama {nama}^^xsd:string ;
-              ex:pekerjaan {pekerjaan}^^xsd:string .
+            ex:nama {nama}^^xsd:string ;
+            ex:pekerjaan {pekerjaan}^^xsd:string .
 source      SELECT nik, nama, pekerjaan
             FROM vm_penduduk.v_penduduk
 
-# error A1: typo nama view
 mappingId   penduduk-a1
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
-            FROM vm_penduduk.v_pendudukk
+            FROM v_penduduk.v_penduduk
 
-# error A2: nama model salah di penduduk
 mappingId   penduduk-a2
 target      ex:penduduk/{nik} a ex:Penduduk .
 source      SELECT nik
-            FROM penduduk.v_penduduk
+            FROM vm_penduduk.v_penduduk
 
 # error A3: view blm dibuat
 mappingId   penduduk-a3

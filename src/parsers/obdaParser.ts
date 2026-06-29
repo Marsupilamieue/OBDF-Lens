@@ -9,8 +9,7 @@ import {
 
 type MappingBlock = firstMappingBlock | subsequentMappingBlock;
 
-// ─── Placeholder extraction ────────────────────────────────────────────────
-
+// placeholder di target extract
 function extractPlaceholders(target: string): string[] {
   const result = new Set<string>();
   const matches = target.matchAll(/\{(\w+)\}/g);
@@ -20,8 +19,7 @@ function extractPlaceholders(target: string): string[] {
   return [...result];
 }
 
-// ─── SQL column extraction ─────────────────────────────────────────────────
-
+// kolom extract
 function parseSelectColumns(query: string): string[] {
   const normalized = query.replace(/\s+/g, ' ');
   const selectIdx = normalized.search(/\bSELECT\b/i);
@@ -36,9 +34,9 @@ function parseSelectColumns(query: string): string[] {
     }else if (normalized[i] === ')') { 
       depth--; 
     }else if (depth === 0 &&
-             /\bFROM\b/i.test(normalized.slice(i, i + 4)) &&
-             (i === 0 || /\s/.test(normalized[i - 1])) &&
-             (i + 4 >= normalized.length || /\s/.test(normalized[i + 4]))) {
+            /\bFROM\b/i.test(normalized.slice(i, i + 4)) &&
+            (i === 0 || /\s/.test(normalized[i - 1])) &&
+            (i + 4 >= normalized.length || /\s/.test(normalized[i + 4]))) {
       fromIdx = i;
       break;
     }
@@ -71,22 +69,19 @@ function parseSelectColumns(query: string): string[] {
     parts.push(current.trim()); 
   }
 
-  // Extract column name or alias from each part
   return parts.map(part => {
     part = part.replace(/\s+/g, ' ').trim();
-    // Check for AS alias
     const asMatch = part.match(/\bAS\s+(\w+)\s*$/i);
     if (asMatch) { 
       return asMatch[1]; 
     }
-    // Last word is the column name
+
     const wordMatch = part.match(/(\w+)\s*$/);
     return wordMatch ? wordMatch[1] : part;
   }).filter(c => c && c.toUpperCase() !== 'DISTINCT');
 }
 
-// ─── FROM clause extraction ────────────────────────────────────────────────
-
+// FROM extraction
 interface FromRef {
   fromModel: string;
   fromView: string;
@@ -114,7 +109,6 @@ function extractFromRef(
       continue; 
     }
 
-    // Get the table reference after FROM
     const afterFrom = line.slice(fromKeywordIdx + 4);
     const refMatch = afterFrom.match(/^\s+([\w.]+)/);
     if (!refMatch) { continue; }
@@ -140,19 +134,18 @@ function extractFromRef(
   return empty;
 }
 
-// ─── AST to ObdaMapping conversion ─────────────────────────────────────────
+// AST to obdamapping
 
 function blockToMapping(block: MappingBlock): ObdaMapping {
-  // tsPEG uses 1-based line numbers; our contract uses 0-based
+
+  // tspeg 1 index based
   const idLine = block.idPart.idPos.line - 1;
   const targetLine = block.targetPart.targetPos.line - 1;
   const sourceLine = block.sourcePart.sourcePos.line - 1;
 
-  // sourceFirstLineOffset: column where the first source content starts
-  // ("source" keyword + spaces). sourceOffset is captured right before the first source content.
   const sourceFirstLineOffset = block.sourcePart.sourceOffset.offset;
 
-  // Assemble target text (multi-line joined by space)
+  // gabung isi target text
   const targetText = [
     block.targetPart.firstLine,
     ...block.targetPart.continuations.map(c => c.value),
@@ -166,7 +159,7 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
     targetLineOffsets.push(contOffset ?? 0);
   }
 
-  // Assemble source text (multi-line joined by newline)
+  // gabung isi source text
   const sourceFirstLine = block.sourcePart.firstLine;
   const sourceContLines = block.sourcePart.continuations.map(c => c.value);
   const sourceLines = [sourceFirstLine, ...sourceContLines];
@@ -205,7 +198,7 @@ function blockToMapping(block: MappingBlock): ObdaMapping {
   };
 }
 
-// ─── Main parser ───────────────────────────────────────────────────────────
+// Main parser
 
 export function parseObda(text: string): ObdaMapping[] {
   const result = parse(text);

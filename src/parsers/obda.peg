@@ -1,6 +1,3 @@
-// ─── OBDA Grammar for tsPEG
-// Parses the Ontop OBDA mapping file format.
-// Sections: [PrefixDeclaration] and [MappingDeclaration] @collection [[...]]
 
 obdaFile
     := _WS sections=section* _WS $
@@ -9,7 +6,8 @@ section
     := prefixSection
      | mappingSection
 
-// ─── Prefix Section
+
+// Prefix Section 
 
 prefixSection
     := header=prefixHeader entries=prefixEntry*
@@ -22,9 +20,8 @@ prefixEntry
      | _WS name=':' _HTAB+ iri='[^\r\n]+' _EOL
      | _BLANKLINE
 
-// ─── Mapping Section
-// First block can appear without a preceding blank line.
-// Subsequent blocks must be separated by at least one blank line.
+
+// Mapping Section 
 
 mappingSection
     := _WS '\[MappingDeclaration\]' _SP '@collection' _SP '\[\[' _EOL
@@ -45,7 +42,8 @@ commentOrBlank
 commentLine
     := '[#;][^\r\n]*' _EOL
 
-// ─── Mapping Fields 
+
+// Mapping Fields
 
 mappingId
     := idPos=@ 'mappingId' _SP+ id='[^\r\n]+' _EOL
@@ -64,7 +62,8 @@ sourceField
 sourceContinuation
     := _INDENT offset=@ value='[^\r\n]+' _EOL
 
-// ─── Whitespace Helpers
+
+// Helpers
 
 _WS       := '[ \t\r\n]*'
 _SP       := '[ \t]'
