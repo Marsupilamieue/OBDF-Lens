@@ -23,7 +23,7 @@ function asArray<T>(x: T | T[] | undefined): T[] {
   return Array.isArray(x) ? x : [x];
 }
 
-// 0-based line and column, matching vscode Position
+// 0 based index di line dan kolom
 function posAt(xml: string, index: number): { line: number; col: number } {
   if (index <= 0) { 
     return { line: 0, col: 0 }; 
@@ -47,7 +47,7 @@ function nodeStartIndex(node: unknown): number | undefined {
   return typeof m?.startIndex === 'number' ? m.startIndex : undefined;
 }
 
-// DDL inside <![CDATA[...]]>; null if malformed.
+// ambil ddl dalam cdata
 function cdataSliceAfter(xml: string, searchFrom: number): { ddl: string; bodyStartAbs: number } | null {
   const open = xml.indexOf(CDATA_BEGIN, searchFrom);
   if (open === -1) { 
@@ -103,7 +103,7 @@ function extractRawIdentifier(expr: string): string {
   return lastWord ? lastWord[1] : trimmed;
 }
 
-// Ambil kolom dari SQL SELECT
+// ambil kolom dari SQL SELECT
 export function parseSelectColumns(
   selectClause: string
 ): { exposedColumns: string[]; aliasMap: Record<string, string> } {
@@ -131,7 +131,7 @@ export function parseSelectColumns(
   return { exposedColumns, aliasMap };
 }
 
- // Ambil source dan table
+ // ambil source dan table
 function parseViewFromClause(ddl: string): { sourceName: string; tableName: string } {
   const fromMatch = ddl.match(/\bFROM\s+([\w]+)\.([\w]+)/i);
   if (fromMatch) {
@@ -140,8 +140,6 @@ function parseViewFromClause(ddl: string): { sourceName: string; tableName: stri
   return { sourceName: '', tableName: '' };
 }
 
-
-// Physical column refs in SELECT, preserving table alias when present.
 export function parseSelectColumnRefs(selectClause: string): SelectColumnRef[] {
   const refs: SelectColumnRef[] = [];
   for (const part of splitSelectParts(selectClause)) {
@@ -172,7 +170,7 @@ export function parseSelectColumnRefs(selectClause: string): SelectColumnRef[] {
   return refs;
 }
 
-// Parse a CREATE VIEW DDL statement to extract the SELECT column list.
+// parse create view ddl -> extract select kolom
 export function extractSelectClauseFromDdl(ddl: string): string {
   const normalized = ddl.replace(/\s+/g, ' ');
   const selectIdx = normalized.search(/\bSELECT\b/i);
@@ -186,7 +184,7 @@ export function extractSelectClauseFromDdl(ddl: string): string {
     }else if (normalized[i] === ')') { 
       depth--; 
     }else if (depth === 0 && /\bFROM\b/i.test(normalized.slice(i, i + 4)) &&
-             /\s/.test(normalized[i - 1] || ' ') && /\s/.test(normalized[i + 4] || ' ')) {
+            /\s/.test(normalized[i - 1] || ' ') && /\s/.test(normalized[i + 4] || ' ')) {
       fromIdx = i;
       break;
     }
@@ -232,7 +230,7 @@ function parseViewsFromDdl(
   return views;
 }
 
-// Parse vdb.xml text and return structured VdbData.
+// main func
 export function parseVdb(text: string): VdbData {
   const models: VdbModel[] = [];
   const sources: VdbSource[] = [];
