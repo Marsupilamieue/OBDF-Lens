@@ -8,6 +8,7 @@ import {
   extractSuggestion,
   findViewForDiagnostic,
   mockCategoryCOptions,
+  createMultiSourceMockOptions,
   parseExpectations,
   parsePositiveExpectations,
 } from './helpers';
@@ -41,7 +42,10 @@ async function assertCaseFile(vdbPath: string): Promise<void> {
   const positive = parsePositiveExpectations(xml);
   const vdbData = parseVdb(xml);
   const views = vdbData.models.flatMap((m) => m.views);
-  const diags = await validateCategoryC(vdbData, vdbPath, mockCategoryCOptions());
+
+  const isMulti = vdbPath.includes('vdb_multi');
+  const opts = isMulti ? createMultiSourceMockOptions() : mockCategoryCOptions();
+  const diags = await validateCategoryC(vdbData, vdbPath, opts);
 
   console.log(`\n--- ${label} (${negative.length} negative, ${positive.length} positive) ---`);
 

@@ -78,11 +78,14 @@ CREATE TABLE IF NOT EXISTS keluarga_rel (
 
 -- Wilayah
 INSERT INTO master_wilayah (wilayah_id, provinsi, kabupaten, kecamatan, desa) VALUES
-  ('JB-001', 'Jawa Barat', 'Bandung', 'Coblong', 'Dago'),
-  ('JB-002', 'Jawa Barat', 'Bandung', 'Cimahi Utara', 'Citeureup'),
-  ('JT-001', 'Jawa Tengah', 'Semarang', 'Banyumanik', 'Padangsari'),
-  ('JT-002', 'Jawa Tengah', 'Solo', 'Laweyan', 'Pajang'),
-  ('JK-001', 'DKI Jakarta', 'Jakarta Selatan', 'Mampang Prapatan', 'Tegal Parang')
+  ('JB-001', 'Jawa Barat',        'Bandung',          'Coblong',              'Dago'),
+  ('JB-002', 'Jawa Barat',        'Bandung',          'Cimahi Utara',         'Citeureup'),
+  ('JT-001', 'Jawa Tengah',       'Semarang',         'Banyumanik',           'Padangsari'),
+  ('JT-002', 'Jawa Tengah',       'Solo',             'Laweyan',              'Pajang'),
+  ('JK-001', 'DKI Jakarta',       'Jakarta Selatan',  'Mampang Prapatan',     'Tegal Parang'),
+  ('JK-002', 'DKI Jakarta',       'Jakarta Barat',    'Kebon Jeruk',          'Kebon Jeruk'),
+  ('JT-003', 'Jawa Timur',        'Surabaya',         'Rungkut',              'Rungkut Kidul'),
+  ('KT-001', 'Kalimantan Timur',  'Balikpapan',       'Balikpapan Tengah',    'Karang Rejo')
 ON CONFLICT DO NOTHING;
 
 -- Keluarga
@@ -91,21 +94,34 @@ INSERT INTO master_keluarga (no_kk, wilayah_id, alamat) VALUES
   ('3273011234560002', 'JB-002', 'Jl. Cimahi Baru No. 5'),
   ('3374011234560001', 'JT-001', 'Jl. Banyumanik Raya No. 8'),
   ('3372011234560001', 'JT-002', 'Jl. Laweyan No. 21'),
-  ('3171011234560001', 'JK-001', 'Jl. Mampang No. 7')
+  ('3171011234560001', 'JK-001', 'Jl. Mampang No. 7'),
+  ('3175011234560001', 'JK-002', 'Jl. Kebon Jeruk No. 3'),
+  ('3578011234560001', 'JT-003', 'Jl. Rungkut No. 15'),
+  ('6471011234560001', 'KT-001', 'Jl. Ahmad Yani No. 88')
 ON CONFLICT DO NOTHING;
 
--- Penduduk
+-- Penduduk (20 baris)
 INSERT INTO master_penduduk (nik, no_kk, nama, tanggal_lahir, pekerjaan, penghasilan, status_hidup) VALUES
-  ('3273010101850001', '3273011234560001', 'Budi Santoso',       '1985-01-01', 'Buruh',          800000,  'hidup'),
-  ('3273010202900002', '3273011234560001', 'Siti Aminah',        '1990-02-02', 'Ibu Rumah Tangga', 0,     'hidup'),
-  ('3273010303750003', '3273011234560002', 'Agus Wijaya',        '1975-03-03', 'Petani',          1200000, 'hidup'),
-  ('3374010404800004', '3374011234560001', 'Dewi Rahayu',        '1980-04-04', 'Pedagang',        950000,  'hidup'),
-  ('3372010505700005', '3372011234560001', 'Hendra Gunawan',     '1970-05-05', 'Nelayan',         750000,  'hidup'),
-  ('3171010606880006', '3171011234560001', 'Fitri Handayani',    '1988-06-06', 'Cleaning Service', 600000, 'hidup'),
-  ('3273010707650007', '3273011234560001', 'Pak Tua Suwarno',    '1965-07-07', 'Tidak Bekerja',   0,       'hidup'),
-  ('3374010808720008', '3374011234560001', 'Nurul Hidayah',      '1972-08-08', 'Buruh Tani',      700000,  'hidup'),
-  ('3372010909600009', '3372011234560001', 'Rustam Effendi',     '1960-09-09', 'Pensiunan',       1500000, 'hidup'),
-  ('3171011010950010', '3171011234560001', 'Rina Marlina',       '1995-10-10', 'Mahasiswi',       0,       'hidup')
+  ('3273010101850001', '3273011234560001', 'Budi Santoso',          '1985-01-01', 'Buruh',              800000,  'hidup'),
+  ('3273010202900002', '3273011234560001', 'Siti Aminah',           '1990-02-02', 'Ibu Rumah Tangga',   0,       'hidup'),
+  ('3273010303750003', '3273011234560002', 'Agus Wijaya',           '1975-03-03', 'Petani',             1200000, 'hidup'),
+  ('3374010404800004', '3374011234560001', 'Dewi Rahayu',           '1980-04-04', 'Pedagang',           950000,  'hidup'),
+  ('3372010505700005', '3372011234560001', 'Hendra Gunawan',        '1970-05-05', 'Nelayan',            750000,  'hidup'),
+  ('3171010606880006', '3171011234560001', 'Fitri Handayani',       '1988-06-06', 'Cleaning Service',   600000,  'hidup'),
+  ('3273010707650007', '3273011234560001', 'Pak Tua Suwarno',       '1965-07-07', 'Tidak Bekerja',      0,       'hidup'),
+  ('3374010808720008', '3374011234560001', 'Nurul Hidayah',         '1972-08-08', 'Buruh Tani',         700000,  'hidup'),
+  ('3372010909600009', '3372011234560001', 'Rustam Effendi',        '1960-09-09', 'Pensiunan',          1500000, 'hidup'),
+  ('3171011010950010', '3171011234560001', 'Rina Marlina',          '1995-10-10', 'Mahasiswi',          0,       'hidup'),
+  ('3175010101920011', '3175011234560001', 'Darmawan Putra',        '1992-01-01', 'Karyawan Swasta',    2500000, 'hidup'),
+  ('3175010202850012', '3175011234560001', 'Maria Ulfa',            '1985-02-02', 'Guru Honorer',       800000,  'hidup'),
+  ('3578010101780013', '3578011234560001', 'Bambang Sutrisno',      '1978-01-01', 'Pedagang Kaki Lima', 600000,  'hidup'),
+  ('3578010202830014', '3578011234560001', 'Wulandari',             '1983-02-02', 'Ibu Rumah Tangga',   0,       'hidup'),
+  ('6471010101900015', '6471011234560001', 'Rizky Maulana',         '1990-01-01', 'Teknisi',            1800000, 'hidup'),
+  ('6471010202750016', '6471011234560001', 'Hj. Salmah',            '1975-02-02', 'Petani',             500000,  'hidup'),
+  ('3273010101700017', '3273011234560001', 'Sarno',                 '1970-01-01', 'Kuli Bangunan',      700000,  'hidup'),
+  ('3374010101910018', '3374011234560001', 'Endang Sulistyowati',   '1991-01-01', 'Pedagang',           900000,  'hidup'),
+  ('3372010101550019', '3372011234560001', 'Mbah Simin',            '1955-01-01', 'Tidak Bekerja',      0,       'hidup'),
+  ('3171010101800020', '3171011234560001', 'Joko Susanto',          '1980-01-01', 'Ojek Online',        1100000, 'hidup')
 ON CONFLICT DO NOTHING;
 
 -- Program Bansos
@@ -117,32 +133,49 @@ INSERT INTO master_program_bansos (nama_program, nominal, periode, aktif) VALUES
   ('Kartu Prakerja',                     600000,  'Sekali',   FALSE)
 ON CONFLICT DO NOTHING;
 
--- Eligibility
+-- Eligibility (20 baris)
 INSERT INTO eligibility (program_id, nik, status_eligible, alasan, validated_at, validated_by) VALUES
-  (1, '3273010101850001', 'eligible',     NULL,                     '2024-01-10', 'Admin Kemensos'),
-  (1, '3273010202900002', 'eligible',     NULL,                     '2024-01-10', 'Admin Kemensos'),
-  (1, '3273010303750003', 'not_eligible', 'Penghasilan di atas UMR','2024-01-11', 'Admin Kemensos'),
-  (2, '3374010404800004', 'eligible',     NULL,                     '2024-01-12', 'Admin Dinsos'),
-  (2, '3372010505700005', 'eligible',     NULL,                     '2024-01-12', 'Admin Dinsos'),
-  (3, '3171010606880006', 'eligible',     NULL,                     '2024-01-13', 'Admin Dinsos'),
-  (3, '3273010707650007', 'eligible',     NULL,                     '2024-01-13', 'Admin Dinsos'),
-  (4, '3374010808720008', 'eligible',     NULL,                     '2024-01-14', 'Admin Desa'),
-  (4, '3372010909600009', 'pending',      NULL,                     NULL,         NULL),
-  (1, '3171011010950010', 'pending',      NULL,                     NULL,         NULL)
+  (1, '3273010101850001', 'eligible',     NULL,                      '2024-01-10', 'Admin Kemensos'),
+  (1, '3273010202900002', 'eligible',     NULL,                      '2024-01-10', 'Admin Kemensos'),
+  (1, '3273010303750003', 'not_eligible', 'Penghasilan di atas UMR', '2024-01-11', 'Admin Kemensos'),
+  (2, '3374010404800004', 'eligible',     NULL,                      '2024-01-12', 'Admin Dinsos'),
+  (2, '3372010505700005', 'eligible',     NULL,                      '2024-01-12', 'Admin Dinsos'),
+  (3, '3171010606880006', 'eligible',     NULL,                      '2024-01-13', 'Admin Dinsos'),
+  (3, '3273010707650007', 'eligible',     NULL,                      '2024-01-13', 'Admin Dinsos'),
+  (4, '3374010808720008', 'eligible',     NULL,                      '2024-01-14', 'Admin Desa'),
+  (4, '3372010909600009', 'pending',      NULL,                      NULL,          NULL),
+  (1, '3171011010950010', 'pending',      NULL,                      NULL,          NULL),
+  (3, '3578010101780013', 'eligible',     NULL,                      '2024-02-01', 'Admin Dinsos'),
+  (3, '3578010202830014', 'eligible',     NULL,                      '2024-02-01', 'Admin Dinsos'),
+  (2, '6471010202750016', 'eligible',     NULL,                      '2024-02-05', 'Admin Dinsos'),
+  (1, '3273010101700017', 'eligible',     NULL,                      '2024-02-10', 'Admin Kemensos'),
+  (2, '3374010101910018', 'eligible',     NULL,                      '2024-02-12', 'Admin Dinsos'),
+  (1, '3372010101550019', 'eligible',     NULL,                      '2024-02-15', 'Admin Kemensos'),
+  (4, '3171010101800020', 'pending',      NULL,                      NULL,          NULL),
+  (5, '3175010101920011', 'not_eligible', 'Penghasilan di atas UMR', '2024-02-20', 'Admin Kemensos'),
+  (4, '6471010101900015', 'not_eligible', 'Penghasilan di atas UMR', '2024-02-22', 'Admin Desa'),
+  (2, '3175010202850012', 'eligible',     NULL,                      '2024-03-01', 'Admin Dinsos')
 ON CONFLICT DO NOTHING;
 
--- Transaksi Bansos
+-- Transaksi Bansos (17 baris)
 INSERT INTO transaksi_bansos (eligibility_id, nik, program_id, tanggal, nominal, status) VALUES
-  (1, '3273010101850001', 1, '2024-01-15', 900000, 'cair'),
-  (2, '3273010202900002', 1, '2024-01-15', 900000, 'cair'),
-  (4, '3374010404800004', 2, '2024-01-16', 200000, 'cair'),
-  (5, '3372010505700005', 2, '2024-01-16', 200000, 'cair'),
-  (6, '3171010606880006', 3, '2024-01-17', 600000, 'cair'),
-  (7, '3273010707650007', 3, '2024-01-17', 600000, 'cair'),
-  (8, '3374010808720008', 4, '2024-01-18', 300000, 'pending'),
-  (1, '3273010101850001', 1, '2024-04-15', 900000, 'cair'),
-  (2, '3273010202900002', 1, '2024-04-15', 900000, 'cair'),
-  (4, '3374010404800004', 2, '2024-02-16', 200000, 'gagal')
+  (1,  '3273010101850001', 1, '2024-01-15', 900000, 'cair'),
+  (2,  '3273010202900002', 1, '2024-01-15', 900000, 'cair'),
+  (4,  '3374010404800004', 2, '2024-01-16', 200000, 'cair'),
+  (5,  '3372010505700005', 2, '2024-01-16', 200000, 'cair'),
+  (6,  '3171010606880006', 3, '2024-01-17', 600000, 'cair'),
+  (7,  '3273010707650007', 3, '2024-01-17', 600000, 'cair'),
+  (8,  '3374010808720008', 4, '2024-01-18', 300000, 'pending'),
+  (1,  '3273010101850001', 1, '2024-04-15', 900000, 'cair'),
+  (2,  '3273010202900002', 1, '2024-04-15', 900000, 'cair'),
+  (4,  '3374010404800004', 2, '2024-02-16', 200000, 'gagal'),
+  (11, '3578010101780013', 3, '2024-02-15', 600000, 'cair'),
+  (12, '3578010202830014', 3, '2024-02-15', 600000, 'cair'),
+  (13, '6471010202750016', 2, '2024-02-20', 200000, 'cair'),
+  (14, '3273010101700017', 1, '2024-03-01', 900000, 'cair'),
+  (15, '3374010101910018', 2, '2024-03-05', 200000, 'cair'),
+  (16, '3372010101550019', 1, '2024-03-10', 900000, 'cair'),
+  (20, '3175010202850012', 2, '2024-04-01', 200000, 'pending')
 ON CONFLICT DO NOTHING;
 
 -- Keluarga rel (untuk vdb_c4)
@@ -155,5 +188,8 @@ ON CONFLICT DO NOTHING;
 -- Penerima (untuk vdb_c2 / vdb_c3)
 INSERT INTO master_penerima (nik, nama_penerima) VALUES
   ('3273010101850001', 'Budi Santoso'),
-  ('3273010202900002', 'Siti Aminah')
+  ('3273010202900002', 'Siti Aminah'),
+  ('3374010404800004', 'Dewi Rahayu'),
+  ('3372010505700005', 'Hendra Gunawan'),
+  ('3578010101780013', 'Bambang Sutrisno')
 ON CONFLICT DO NOTHING;

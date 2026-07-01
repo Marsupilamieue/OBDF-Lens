@@ -1,0 +1,155 @@
+[PrefixDeclaration]
+:		http://example.org/
+ex:		http://example.org/ontology#
+xsd:	http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+# ============================================================
+# MAPPINGS OK — multi-source, masing-masing dari DB berbeda
+# ============================================================
+
+# [OK] Identitas penduduk dari Dukcapil (dukcapil_db)
+mappingId   penduduk-ok
+target      ex:penduduk/{nik} a ex:Penduduk ;
+            ex:nama {nama}^^xsd:string ;
+            ex:pekerjaan {pekerjaan}^^xsd:string ;
+            ex:jenisKelamin {jenis_kelamin}^^xsd:string ;
+            ex:agama {agama}^^xsd:string .
+source      SELECT nik, nama, pekerjaan, jenis_kelamin, agama
+            FROM vm_penduduk.v_penduduk
+
+# [OK] Data KK dari Dukcapil (dukcapil_db)
+mappingId   kk-ok
+target      ex:kk/{no_kk} a ex:KartuKeluarga ;
+            ex:alamat {alamat}^^xsd:string ;
+            ex:kelurahan {kelurahan}^^xsd:string ;
+            ex:kota {kota}^^xsd:string ;
+            ex:provinsi {provinsi}^^xsd:string .
+source      SELECT no_kk, alamat, kelurahan, kota, provinsi
+            FROM vm_kartu_keluarga.v_kartu_keluarga
+
+# [OK] Program bansos dari bansos_db
+mappingId   program-ok
+target      ex:program/{program_id} a ex:ProgramBansos ;
+            ex:namaProgramBansos {program_name}^^xsd:string ;
+            ex:nominal {nominal}^^xsd:integer .
+source      SELECT program_id, program_name, nominal
+            FROM vm_program_bansos.v_program_bansos
+
+# [OK] Eligibility dari bansos_db
+mappingId   eligibility-ok
+target      ex:eligibility/{eligibility_id} a ex:Eligibility ;
+            ex:nikPenerima {nik}^^xsd:string ;
+            ex:statusEligible {status_eligible}^^xsd:string .
+source      SELECT eligibility_id, nik, status_eligible
+            FROM vm_eligibility.v_eligibility
+
+# [OK] Status kemiskinan KPM dari dtks_db
+mappingId   kpm-ok
+target      ex:kpm/{kpm_id} a ex:KPM ;
+            ex:nikKepala {nik_kepala}^^xsd:string ;
+            ex:desilKesejahteraan {desil_kesejahteraan}^^xsd:integer ;
+            ex:statusKemiskinan {status_kemiskinan}^^xsd:string .
+source      SELECT kpm_id, nik_kepala, desil_kesejahteraan, status_kemiskinan
+            FROM vm_dtks.v_kpm
+
+# [OK] Kepesertaan BPJS dari bpjs_db
+mappingId   bpjs-ok
+target      ex:peserta/{peserta_id} a ex:PesertaBPJS ;
+            ex:nik {nik}^^xsd:string ;
+            ex:kelasLayanan {kelas_layanan}^^xsd:integer ;
+            ex:jenisBPJS {jenis_kepesertaan}^^xsd:string ;
+            ex:statusBPJS {status_aktif}^^xsd:string .
+source      SELECT peserta_id, nik, kelas_layanan, jenis_kepesertaan, status_aktif
+            FROM vm_bpjs.v_peserta_bpjs
+
+# [OK] Cross-source view: penduduk terpadu lintas 4 DB
+mappingId   penerima-terpadu-ok
+target      ex:penerima/{nik} a ex:PenerimaTerpadu ;
+            ex:nama {nama}^^xsd:string ;
+            ex:statusKemiskinan {status_kemiskinan}^^xsd:string ;
+            ex:statusEligible {status_eligible}^^xsd:string ;
+            ex:statusBPJS {status_bpjs}^^xsd:string .
+source      SELECT nik, nama, status_kemiskinan, status_eligible, status_bpjs
+            FROM vm_penerima_terpadu.v_penerima_terpadu
+
+
+# ============================================================
+# ERROR CASES — Category A: referensi model/view ke vdb.xml
+# ============================================================
+
+# [A1] Typo nama view: v_pkm (harusnya v_kpm) — dari vm_dtks
+mappingId   kpm-a1
+target      ex:kpm/{kpm_id} a ex:KPM .
+source      SELECT kpm_id
+            FROM vm_dtks.v_pkm
+
+# [A2] Typo nama model: vm_dtks_db (harusnya vm_dtks)
+mappingId   dtks-a2
+target      ex:kpm/{kpm_id} a ex:KPM .
+source      SELECT kpm_id
+            FROM vm_dtks_db.v_kpm
+
+# [A3] Model vm_bpjs_kosong ada di vdb.xml tapi tidak punya view
+mappingId   bpjs-a3
+target      ex:peserta/{peserta_id} a ex:PesertaBPJS .
+source      SELECT peserta_id
+            FROM vm_bpjs_kosong.v_peserta_bpjs
+
+# [A4] Tidak pakai prefix model — hanya nama view saja
+mappingId   penduduk-a4
+target      ex:penduduk/{nik} a ex:Penduduk .
+source      SELECT nik
+            FROM v_penduduk
+
+
+# ============================================================
+# ERROR CASES — Category B: kolom di .obda vs view di vdb.xml
+# ============================================================
+
+# [B1] Kolom 'kunjungan_count' tidak ada di view v_peserta_bpjs (bpjs_db)
+mappingId   bpjs-b1
+target      ex:peserta/{peserta_id} a ex:PesertaBPJS .
+source      SELECT peserta_id, kunjungan_count
+            FROM vm_bpjs.v_peserta_bpjs
+
+# [B2] Typo kolom 'desl_kesejahteraan' (harusnya 'desil_kesejahteraan') — dtks_db
+mappingId   kpm-b2
+target      ex:kpm/{kpm_id} a ex:KPM .
+source      SELECT kpm_id, desl_kesejahteraan
+            FROM vm_dtks.v_kpm
+
+# [B2] Typo kolom 'jenis_kepesrtaan' (harusnya 'jenis_kepesertaan') — bpjs_db
+mappingId   bpjs-b2
+target      ex:peserta/{peserta_id} a ex:PesertaBPJS .
+source      SELECT peserta_id, jenis_kepesrtaan
+            FROM vm_bpjs.v_peserta_bpjs
+
+# [B4] Pakai nama kolom asli 'no_ktp_kepala', bukan alias 'nik_kepala' di v_kpm
+mappingId   kpm-b4
+target      ex:kpm/{kpm_id} a ex:KPM .
+source      SELECT kpm_id, no_ktp_kepala
+            FROM vm_dtks.v_kpm
+
+# [B4] Pakai nama kolom asli 'nama_program', bukan alias 'program_name' di v_program_bansos
+mappingId   program-b4
+target      ex:program/{program_id} a ex:ProgramBansos .
+source      SELECT program_id, nama_program
+            FROM vm_program_bansos.v_program_bansos
+
+# [B5] Placeholder {agama} di target tidak ada di SELECT source (dukcapil_db)
+mappingId   penduduk-b5-agama
+target      ex:penduduk/{nik} a ex:Penduduk ;
+            ex:agama {agama}^^xsd:string .
+source      SELECT nik, nama
+            FROM vm_penduduk.v_penduduk
+
+# [B5] Placeholder {sumber_data} di target tidak ada di SELECT source (dtks_db)
+mappingId   kpm-b5-sumber
+target      ex:kpm/{kpm_id} a ex:KPM ;
+            ex:sumberData {sumber_data}^^xsd:string .
+source      SELECT kpm_id, nik_kepala, status_kemiskinan
+            FROM vm_dtks.v_kpm
+
+]]

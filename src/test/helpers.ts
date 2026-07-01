@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DbConnectionConfig, DbMetaProvider } from '../validators/categoryC';
+import { DbConnectionConfig, DbMetaProvider } from '../db/DbAdapter';
 import { VdbView } from '../types';
 
 export type CaseExpectation = {
@@ -85,12 +85,59 @@ export const BANSOS_COLUMNS: Record<string, string[]> = {
     'eligibility_id', 'program_id', 'nik', 'status_eligible',
     'validated_at', 'validated_by',
   ],
-  master_program_bansos: ['program_id', 'nama_program', 'nominal'],
+  master_program_bansos: ['program_id', 'nama_program', 'nominal', 'periode', 'aktif'],
   master_penerima: ['penerima_id', 'nik', 'nama_penerima'],
   keluarga_rel: ['left_id', 'right_id'],
   transaksi_bansos: [
     'transaksi_id', 'eligibility_id', 'nik', 'program_id', 'tanggal', 'nominal',
     'status', 'created_at',
+  ],
+};
+
+export const DUKCAPIL_COLUMNS: Record<string, string[]> = {
+  penduduk: [
+    'no_ktp', 'no_kk_ref', 'nama_lengkap', 'tempat_lahir', 'tgl_lahir',
+    'jenis_kelamin', 'agama', 'status_perkawinan', 'pendidikan_terakhir',
+    'pekerjaan_dukcapil', 'created_at',
+  ],
+  kartu_keluarga: [
+    'no_kk', 'alamat_jalan', 'rt', 'rw', 'kelurahan',
+    'kecamatan', 'kota', 'provinsi', 'kode_pos', 'created_at',
+  ],
+  akta_kelahiran: [
+    'akta_id', 'no_ktp', 'nomor_akta', 'tempat_lahir', 'tgl_lahir',
+    'nama_ayah', 'nama_ibu',
+  ],
+};
+
+/** Column metadata for dtks_db. */
+export const DTKS_COLUMNS: Record<string, string[]> = {
+  keluarga_penerima_manfaat: [
+    'kpm_id', 'no_ktp_kepala', 'nama_kepala_keluarga', 'no_kk',
+    'desil_kesejahteraan', 'status_kemiskinan', 'sumber_data', 'updated_at',
+  ],
+  anggota_kpm: [
+    'anggota_id', 'kpm_id', 'no_ktp_anggota', 'nama_anggota',
+    'hubungan_keluarga', 'usia',
+  ],
+  program_kpm: [
+    'kpm_program_id', 'kpm_id', 'kode_program', 'nama_program',
+    'tgl_penetapan', 'status_aktif',
+  ],
+};
+
+/** Column metadata for bpjs_db (bpjs_kes). */
+export const BPJS_COLUMNS: Record<string, string[]> = {
+  peserta: [
+    'peserta_id', 'no_ktp', 'nama_peserta', 'kelas_layanan',
+    'jenis_kepesertaan', 'status_aktif', 'tgl_daftar', 'tgl_akhir',
+  ],
+  fasilitas_kesehatan: [
+    'faskes_id', 'kode_faskes', 'nama_faskes', 'jenis_faskes', 'wilayah_kode',
+  ],
+  kunjungan: [
+    'kunjungan_id', 'peserta_id', 'faskes_id', 'tgl_kunjungan',
+    'diagnosa', 'biaya', 'ditanggung_bpjs',
   ],
 };
 
@@ -125,4 +172,35 @@ export function mockCategoryCOptions(
     metaProvider: createMockMetaProvider(columnsMap),
     connections: { bansos_db: MOCK_CONNECTION },
   };
+}
+
+const MULTI_SOURCE_MAP: Record<string, Record<string, string[]>> = {
+  bansos_db:   BANSOS_COLUMNS,
+  dukcapil_db: DUKCAPIL_COLUMNS,
+  dtks_db:     DTKS_COLUMNS,
+  bpjs_db:     BPJS_COLUMNS,
+};
+
+export function createMultiSourceMockOptions() {
+  const connections: Record<string, DbConnectionConfig> = {};
+  for (const sourceName of Object.keys(MULTI_SOURCE_MAP)) {
+    if (sourceName === 'bpjs_db') {
+      connections[sourceName] = { dialect: 'mysql', host: 'localhost', port: 3306, database: sourceName, user: 'test', password: 'test' };
+    } else if (sourceName === 'dtks_db') {
+      connections[sourceName] = { dialect: 'sqlite', filename: '/mock/dtks.db' };
+    } else {
+      connections[sourceName] = { dialect: 'postgresql', host: 'localhost', port: 5432, database: sourceName, user: 'test', password: 'test' };
+    }
+  }
+  const metaProvider: DbMetaProvider = {
+    getTables: async (sourceName) => {
+      const cols = MULTI_SOURCE_MAP[sourceName];
+      if (!cols) { throw new Error(`Unknown source: ${sourceName}`); }
+      return Object.keys(cols);
+    },
+    getColumns: async (sourceName, tableName) => {
+      return MULTI_SOURCE_MAP[sourceName]?.[tableName] ?? [];
+    },
+  };
+  return { connections, metaProvider };
 }

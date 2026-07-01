@@ -21,7 +21,7 @@
     <metadata type="DDL"><![CDATA[
       CREATE VIEW v_c2_02 AS
         SELECT eligibility_id, nik
-        FROM bansos_db.eligibilitty;
+        FROM bansos_db.eligibilityy;
     ]]></metadata>
   </model>
 

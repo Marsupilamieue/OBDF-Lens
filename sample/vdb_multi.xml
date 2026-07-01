@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ============================================================
+  OBDF Lens — VDB Multi-Source Sample
+  Nama VDB: bansos-integrated-vdb
+  
+  Menggabungkan 4 physical database menjadi satu lapisan virtual:
+    bansos_db   — program, eligibility, transaksi bansos
+    dukcapil_db — data kependudukan (skema berbeda: no_ktp, nama_lengkap)
+    dtks_db     — Data Terpadu Kesejahteraan Sosial (desil, status kemiskinan)
+    bpjs_db     — data kepesertaan dan kunjungan BPJS Kesehatan
+
+  Kunci federasi lintas DB:
+    bansos_db.master_penduduk.nik
+      = dukcapil_db.penduduk.no_ktp
+      = dtks_db.keluarga_penerima_manfaat.no_ktp_kepala
+      = bpjs_db.peserta.no_ktp
+  ============================================================
+-->
+<vdb name="bansos-integrated-vdb" version="1">
+
+  <!-- ======================================================
+       PHYSICAL SOURCES — 4 database PostgreSQL
+       ====================================================== -->
+
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <model name="dukcapil_db" type="PHYSICAL">
+    <source name="dukcapil_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/dukcapil-ds"/>
+  </model>
+
+  <model name="dtks_db" type="PHYSICAL">
+    <source name="dtks_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/dtks-ds"/>
+  </model>
+
+  <model name="bpjs_db" type="PHYSICAL">
+    <source name="bpjs_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bpjs-ds"/>
+  </model>
+
+
+  <!-- ======================================================
+       VIRTUAL MODELS — view per domain
+       ====================================================== -->
+
+  <!-- vm_penduduk: identitas penduduk dari Dukcapil -->
+  <model name="vm_penduduk" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_penduduk AS
+        SELECT no_ktp AS nik,
+               nama_lengkap AS nama,
+               tgl_lahir,
+               jenis_kelamin,
+               agama,
+               status_perkawinan,
+               pendidikan_terakhir,
+               pekerjaan_dukcapil AS pekerjaan
+        FROM dukcapil_db.penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_kartu_keluarga: data KK dari Dukcapil -->
+  <model name="vm_kartu_keluarga" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_kartu_keluarga AS
+        SELECT no_kk,
+               alamat_jalan AS alamat,
+               rt, rw, kelurahan,
+               kecamatan, kota, provinsi, kode_pos
+        FROM dukcapil_db.kartu_keluarga;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_program_bansos: program bantuan dari bansos DB -->
+  <model name="vm_program_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_program_bansos AS
+        SELECT program_id,
+               nama_program AS program_name,
+               nominal, periode, aktif
+        FROM bansos_db.master_program_bansos;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_eligibility: status kelayakan penerima bansos -->
+  <model name="vm_eligibility" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_eligibility AS
+        SELECT eligibility_id, program_id, nik,
+               status_eligible, validated_at, validated_by
+        FROM bansos_db.eligibility;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_transaksi: riwayat pencairan bansos -->
+  <model name="vm_transaksi" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_transaksi AS
+        SELECT transaksi_id, nik, program_id,
+               tanggal, nominal, status
+        FROM bansos_db.transaksi_bansos;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_dtks: status kemiskinan dari DTKS -->
+  <model name="vm_dtks" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_kpm AS
+        SELECT kpm_id,
+               no_ktp_kepala AS nik_kepala,
+               nama_kepala_keluarga,
+               no_kk,
+               desil_kesejahteraan,
+               status_kemiskinan,
+               sumber_data
+        FROM dtks_db.keluarga_penerima_manfaat;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_bpjs: kepesertaan BPJS Kesehatan -->
+  <model name="vm_bpjs" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_peserta_bpjs AS
+        SELECT peserta_id,
+               no_ktp AS nik,
+               nama_peserta,
+               kelas_layanan,
+               jenis_kepesertaan,
+               status_aktif,
+               tgl_daftar
+        FROM bpjs_db.peserta;
+    ]]></metadata>
+  </model>
+
+  <!-- vm_bpjs_kosong: model tanpa view — dipakai untuk test case A3 di .obda -->
+  <model name="vm_bpjs_kosong" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+
+    ]]></metadata>
+  </model>
+
+  <!-- vm_penerima_terpadu: view lintas 4 database (cross-source join) -->
+  <model name="vm_penerima_terpadu" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_penerima_terpadu AS
+        SELECT d.no_ktp        AS nik,
+               d.nama_lengkap  AS nama,
+               t.status_kemiskinan,
+               t.desil_kesejahteraan,
+               e.status_eligible,
+               e.program_id,
+               bj.jenis_kepesertaan  AS status_bpjs,
+               bj.kelas_layanan
+        FROM dukcapil_db.penduduk d
+        LEFT JOIN dtks_db.keluarga_penerima_manfaat t  ON d.no_ktp = t.no_ktp_kepala
+        LEFT JOIN bansos_db.eligibility              e  ON d.no_ktp = e.nik
+        LEFT JOIN bpjs_db.peserta                   bj ON d.no_ktp = bj.no_ktp;
+    ]]></metadata>
+  </model>
+
+</vdb>

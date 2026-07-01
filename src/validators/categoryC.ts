@@ -6,6 +6,13 @@ import {
   parseSelectColumnRefs,
   SelectColumnRef,
 } from "../parsers/vdbParser";
+import {
+  DbConnectionConfig,
+  DbMetaProvider,
+} from "../db/DbAdapter";
+import { defaultSchemaProvider } from "../db/SchemaProvider";
+
+export type { DbConnectionConfig, DbMetaProvider };
 
 function findInDdl(
   view: VdbView,
@@ -42,75 +49,31 @@ function findInDdl(
   return new vscode.Range(absStartLine, absStartChar, absEndLine, absEndChar);
 }
 
-export interface DbConnectionConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-}
-
-export interface DbMetaProvider {
-  getTables: (
-    sourceName: string,
-    connConfig: DbConnectionConfig,
-  ) => Promise<string[]>;
-  getColumns: (
-    sourceName: string,
-    tableName: string,
-    connConfig: DbConnectionConfig,
-  ) => Promise<string[]>;
-}
-
-// query db
-async function queryDbMeta(
-  config: DbConnectionConfig,
-  query: string,
-  params: string[],
-): Promise<string[]> {
-  let pg: typeof import("pg");
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    pg = require("pg");
-  } catch {
-    throw new Error("Package not found");
-  }
-
-  const client = new pg.Client(config);
-  await client.connect();
-  try {
-    const result = await client.query(query, params);
-    return result.rows.map(
-      (r: Record<string, string>) => Object.values(r)[0] as string,
-    );
-  } finally {
-    await client.end();
-  }
-}
-
 function pct(score: number): string {
   return Math.round(score * 100) + "%";
 }
 
-// Map SQL table alias (lowercase) to physical table name from FROM/JOIN clauses.
-function parseAliasToTableMap(ddl: string): Map<string, string> {
-  const map = new Map<string, string>();
+// Map SQL table alias (lowercase) to { sourceName, tableName } from FROM/JOIN clauses.
+function parseAliasToTableMap(ddl: string): Map<string, { sourceName: string; tableName: string }> {
+  const map = new Map<string, { sourceName: string; tableName: string }>();
 
   const fromMatch = ddl.match(
-    /\bFROM\s+[\w]+\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/i,
+    /\bFROM\s+([\w]+)\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/i,
   );
   if (fromMatch) {
-    const tableName = fromMatch[1];
-    const alias = (fromMatch[2] ?? tableName).toLowerCase();
-    map.set(alias, tableName);
+    const sourceName = fromMatch[1];
+    const tableName = fromMatch[2];
+    const alias = (fromMatch[3] ?? tableName).toLowerCase();
+    map.set(alias, { sourceName, tableName });
   }
 
-  const joinRegex = /\bJOIN\s+[\w]+\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/gi;
+  const joinRegex = /\bJOIN\s+([\w]+)\.([\w]+)(?:\s+(?:AS\s+)?(\w+))?/gi;
   let joinMatch: RegExpExecArray | null;
   while ((joinMatch = joinRegex.exec(ddl)) !== null) {
-    const tableName = joinMatch[1];
-    const alias = (joinMatch[2] ?? tableName).toLowerCase();
-    map.set(alias, tableName);
+    const sourceName = joinMatch[1];
+    const tableName = joinMatch[2];
+    const alias = (joinMatch[3] ?? tableName).toLowerCase();
+    map.set(alias, { sourceName, tableName });
   }
 
   return map;
@@ -139,6 +102,7 @@ function reportJoinColumnError(
   view: VdbView,
   vdbUri: string,
   joinCol: string,
+  sourceName: string,
   tableName: string,
   tableColumns: string[],
   joinIndex: number,
@@ -160,7 +124,7 @@ function reportJoinColumnError(
   };
 
   let msg = `[C4] Kolom '${joinCol}' tidak ditemukan di tabel '${tableName}' (JOIN condition)\n`;
-  msg += `Source: ${view.sourceName}.${tableName} (Tabel ditemukan)\n`;
+  msg += `Source: ${sourceName}.${tableName} (Tabel ditemukan)\n`;
   if (closest) {
     msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
   }
@@ -188,6 +152,7 @@ function reportSelectColumnError(
   view: VdbView,
   vdbUri: string,
   ref: SelectColumnRef,
+  sourceName: string,
   tableName: string,
   tableColumns: string[],
   diagnostics: vscode.Diagnostic[],
@@ -218,7 +183,7 @@ function reportSelectColumnError(
   };
 
   let msg = `[C3] Kolom '${ref.display}' tidak ditemukan di tabel '${tableName}'\n`;
-  msg += `Source: ${view.sourceName}.${tableName} (Tabel ditemukan)\n`;
+  msg += `Source: ${sourceName}.${tableName} (Tabel ditemukan)\n`;
   if (closest) {
     msg += `Suggestion: Maksud kamu '${closest.match}'? (similarity: ${pct(closest.score)})\n`;
   }
@@ -268,7 +233,9 @@ export async function validateCategoryC(
     options?.connections ??
     config.get<Record<string, DbConnectionConfig>>("connections") ??
     {};
-  const metaProvider = options?.metaProvider;
+
+  const metaProvider: DbMetaProvider =
+    options?.metaProvider ?? defaultSchemaProvider;
 
   if (Object.keys(connections).length === 0) {
     const firstView = vdbData.models.flatMap((m) => m.views)[0];
@@ -295,13 +262,7 @@ export async function validateCategoryC(
     if (tableCache[sourceName]) {
       return tableCache[sourceName];
     }
-    const tables = metaProvider
-      ? await metaProvider.getTables(sourceName, connConfig)
-      : await queryDbMeta(
-          connConfig,
-          `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`,
-          [],
-        );
+    const tables = await metaProvider.getTables(sourceName, connConfig);
     tableCache[sourceName] = tables;
     return tables;
   }
@@ -316,13 +277,11 @@ export async function validateCategoryC(
       return columnCache[key];
     }
     try {
-      const columns = metaProvider
-        ? await metaProvider.getColumns(sourceName, tableName, connConfig)
-        : await queryDbMeta(
-            connConfig,
-            `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
-            [tableName],
-          );
+      const columns = await metaProvider.getColumns(
+        sourceName,
+        tableName,
+        connConfig,
+      );
       columnCache[key] = columns;
       return columns;
     } catch {
@@ -473,14 +432,24 @@ export async function validateCategoryC(
 
       // C3: Check SELECT columns against the physical table for each alias (or FROM table)
       for (const ref of selectRefs) {
-        const tableName = ref.tableAlias
-          ? (aliasToTable.get(ref.tableAlias.toLowerCase()) ?? view.tableName)
-          : view.tableName;
+        let tableName = view.tableName;
+        let sourceName = view.sourceName;
+
+        if (ref.tableAlias) {
+          const aliasInfo = aliasToTable.get(ref.tableAlias.toLowerCase());
+          if (aliasInfo) {
+            tableName = aliasInfo.tableName;
+            sourceName = aliasInfo.sourceName;
+          }
+        }
+
+        const tableConnConfig = connections[sourceName];
+        if (!tableConnConfig) continue;
 
         const tableColumns =
-          tableName === view.tableName
+          tableName === view.tableName && sourceName === view.sourceName
             ? dbColumns
-            : await getColumns(view.sourceName, tableName, connConfig);
+            : await getColumns(sourceName, tableName, tableConnConfig);
         if (tableColumns.length === 0) {
           continue;
         }
@@ -493,6 +462,7 @@ export async function validateCategoryC(
             view,
             vdbUri,
             ref,
+            sourceName,
             tableName,
             tableColumns,
             diagnostics,
@@ -503,8 +473,8 @@ export async function validateCategoryC(
       // C4: Check JOIN ON columns against the physical table for each alias
       const joinRefs = parseJoinConditions(view.ddl);
       for (const ref of joinRefs) {
-        const tableName = aliasToTable.get(ref.alias.toLowerCase());
-        if (!tableName) {
+        const aliasInfo = aliasToTable.get(ref.alias.toLowerCase());
+        if (!aliasInfo) {
           const c4AliasRange = findInDdl(view, ref.alias, ref.index);
           const availableAliases = Array.from(aliasToTable.keys());
           const closestAlias = findClosest(ref.alias, availableAliases);
@@ -531,10 +501,14 @@ export async function validateCategoryC(
           continue;
         }
 
+        const { sourceName, tableName } = aliasInfo;
+        const tableConnConfig = connections[sourceName];
+        if (!tableConnConfig) continue;
+
         const tableColumns =
-          tableName === view.tableName
+          tableName === view.tableName && sourceName === view.sourceName
             ? dbColumns
-            : await getColumns(view.sourceName, tableName, connConfig);
+            : await getColumns(sourceName, tableName, tableConnConfig);
         if (tableColumns.length === 0) {
           continue;
         }
@@ -547,6 +521,7 @@ export async function validateCategoryC(
             view,
             vdbUri,
             ref.column,
+            sourceName,
             tableName,
             tableColumns,
             ref.index,

@@ -12,7 +12,7 @@
     <metadata type="DDL"><![CDATA[
       CREATE VIEW v_c1_bad AS
         SELECT nik, nama
-        FROM bansos_dbs.master_penduduk;
+        FROM bansos_dbb.master_penduduk;
     ]]></metadata>
   </model>
 

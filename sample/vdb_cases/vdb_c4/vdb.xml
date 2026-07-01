@@ -24,7 +24,7 @@
       CREATE VIEW v_c4_02 AS
         SELECT left_id, right_id
         FROM bansos_db.keluarga_rel a
-        JOIN bansos_db.keluarga_rel b ON a.lef_id = b.right_id;
+        join bansos_db.keluarga_rel b on a.lef_id = b.right_id;
     ]]></metadata>
   </model>
 
@@ -56,7 +56,7 @@
         SELECT k.no_kk, k.wilayah_id, w.provinsi
         FROM bansos_db.master_keluarga k
         JOIN bansos_db.master_wilayah w ON k.wilayah_id = w.wilayah_ids;
-    ]]></metadata>
+    ]]></metadata>%
   </model>
 
   <!-- EXPECT_POSITIVE view=v_c4_ok -->

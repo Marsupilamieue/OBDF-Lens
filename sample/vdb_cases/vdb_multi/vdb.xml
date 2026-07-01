@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="multi-cases" version="1">
+  <model name="bansos_db" type="PHYSICAL">
+    <source name="bansos_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/bansos-ds"/>
+  </model>
+
+  <model name="dukcapil_db" type="PHYSICAL">
+    <source name="dukcapil_db"
+            translator-name="postgresql"
+            connection-jndi-name="java:/dukcapil-ds"/>
+  </model>
+
+  <model name="dtks_db" type="PHYSICAL">
+    <source name="dtks_db"
+            translator-name="sqlite"
+            connection-jndi-name="java:/dtks-ds"/>
+  </model>
+
+  <model name="bpjs_db" type="PHYSICAL">
+    <source name="bpjs_db"
+            translator-name="mysql"
+            connection-jndi-name="java:/bpjs-ds"/>
+  </model>
+
+
+  <!-- C1: Nama source salah — satu per source -->
+
+  <!-- EXPECT code=C1 view=v_mc1_bansos suggestion=bansos_db -->
+  <model name="vm_mc1_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc1_bansos AS
+        SELECT nik, nama
+        FROM bansos_dbb.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_mc1_dukcapil suggestion=dukcapil_db -->
+  <model name="vm_mc1_dukcapil" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc1_dukcapil AS
+        SELECT no_ktp, nama_lengkap
+        FROM dukcapi_db.penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_mc1_dtks suggestion=dtks_db -->
+  <model name="vm_mc1_dtks" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc1_dtks AS
+        SELECT kpm_id, no_ktp_kepala
+        FROM dtsk_db.keluarga_penerima_manfaat;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_mc1_bpjs suggestion=bpjs_db -->
+  <model name="vm_mc1_bpjs" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc1_bpjs AS
+        SELECT peserta_id, no_ktp
+        FROM bjps_db.peserta;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C1 view=v_mc1_unknown suggestion=none -->
+  <model name="vm_mc1_unknown" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc1_unknown AS
+        SELECT nik, nama
+        FROM oracle_erp_prod.master_penduduk;
+    ]]></metadata>
+  </model>
+
+
+  <!-- C2: Nama tabel salah — satu per source -->
+
+  <!-- EXPECT code=C2 view=v_mc2_bansos suggestion=master_penduduk -->
+  <model name="vm_mc2_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_bansos AS
+        SELECT nik, nama
+        FROM bansos_db.master_penduduks;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_eligibility suggestion=eligibility -->
+  <model name="vm_mc2_eligibility" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_eligibility AS
+        SELECT eligibility_id, nik
+        FROM bansos_db.eligibilitys;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_dukcapil suggestion=penduduk -->
+  <model name="vm_mc2_dukcapil" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_dukcapil AS
+        SELECT no_ktp, nama_lengkap
+        FROM dukcapil_db.penduduks;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_kk suggestion=kartu_keluarga -->
+  <model name="vm_mc2_kk" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_kk AS
+        SELECT no_kk, alamat_jalan
+        FROM dukcapil_db.kartu_keluargaa;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_kpm suggestion=keluarga_penerima_manfaat -->
+  <model name="vm_mc2_kpm" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_kpm AS
+        SELECT kpm_id, no_ktp_kepala
+        FROM dtks_db.keluarga_penerima_manfaats;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_bpjs suggestion=peserta -->
+  <model name="vm_mc2_bpjs" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_bpjs AS
+        SELECT peserta_id, no_ktp
+        FROM bpjs_db.pesertas;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C2 view=v_mc2_faskes suggestion=fasilitas_kesehatan -->
+  <model name="vm_mc2_faskes" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc2_faskes AS
+        SELECT faskes_id, nama_faskes
+        FROM bpjs_db.fasilitas_kesehatann;
+    ]]></metadata>
+  </model>
+
+
+  <!-- C3: Nama kolom salah — satu per source, beragam tabel -->
+
+  <!-- EXPECT code=C3 view=v_mc3_nik_bansos suggestion=nik -->
+  <model name="vm_mc3_nik_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_nik_bansos AS
+        SELECT nikk, nama
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_penghasilan suggestion=penghasilan -->
+  <model name="vm_mc3_penghasilan" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_penghasilan AS
+        SELECT nik, penghasilann
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_nama_lengkap suggestion=nama_lengkap -->
+  <model name="vm_mc3_nama_lengkap" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_nama_lengkap AS
+        SELECT no_ktp, namalengkap
+        FROM dukcapil_db.penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_tgl_lahir suggestion=tgl_lahir -->
+  <model name="vm_mc3_tgl_lahir" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_tgl_lahir AS
+        SELECT no_ktp, tgl_lahirr
+        FROM dukcapil_db.penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_desil suggestion=desil_kesejahteraan -->
+  <model name="vm_mc3_desil" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_desil AS
+        SELECT kpm_id, desil_kesejahtraan
+        FROM dtks_db.keluarga_penerima_manfaat;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_status_kmk suggestion=status_kemiskinan -->
+  <model name="vm_mc3_status_kmk" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_status_kmk AS
+        SELECT kpm_id, status_kmiskinan
+        FROM dtks_db.keluarga_penerima_manfaat;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_kelas suggestion=kelas_layanan -->
+  <model name="vm_mc3_kelas" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_kelas AS
+        SELECT peserta_id, no_ktp, kelas_layanann
+        FROM bpjs_db.peserta;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_jenis_kep suggestion=jenis_kepesertaan -->
+  <model name="vm_mc3_jenis_kep" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_jenis_kep AS
+        SELECT peserta_id, no_ktp, jenis_kepesrtaan
+        FROM bpjs_db.peserta;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT code=C3 view=v_mc3_unknown_col suggestion=none -->
+  <model name="vm_mc3_unknown_col" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc3_unknown_col AS
+        SELECT no_ktp, xyz_random_col
+        FROM dukcapil_db.penduduk;
+    ]]></metadata>
+  </model>
+
+
+  <!-- C4: Kolom salah di JOIN ON — cross-source join -->
+
+  <!-- JOIN dukcapil + bansos: kolom bansos salah -->
+  <!-- EXPECT code=C4 view=v_mc4_join_db1 suggestion=nik -->
+  <model name="vm_mc4_join_db1" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc4_join_db1 AS
+        SELECT d.no_ktp, d.nama_lengkap, b.penghasilan
+        FROM dukcapil_db.penduduk d
+        JOIN bansos_db.master_penduduk b ON d.no_ktp = b.nikk;
+    ]]></metadata>
+  </model>
+
+  <!-- JOIN dukcapil + bansos: kolom dukcapil salah -->
+  <!-- EXPECT code=C4 view=v_mc4_join_db2 suggestion=no_ktp -->
+  <model name="vm_mc4_join_db2" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc4_join_db2 AS
+        SELECT d.no_ktp, d.nama_lengkap, b.penghasilan
+        FROM dukcapil_db.penduduk d
+        JOIN bansos_db.master_penduduk b ON d.no_ktpp = b.nik;
+    ]]></metadata>
+  </model>
+
+  <!-- JOIN dukcapil + dtks: kolom dtks salah -->
+  <!-- EXPECT code=C4 view=v_mc4_join_dtks suggestion=no_ktp_kepala -->
+  <model name="vm_mc4_join_dtks" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc4_join_dtks AS
+        SELECT d.no_ktp, d.nama_lengkap, t.desil_kesejahteraan
+        FROM dukcapil_db.penduduk d
+        JOIN dtks_db.keluarga_penerima_manfaat t ON d.no_ktp = t.no_ktp_kepalaa;
+    ]]></metadata>
+  </model>
+
+  <!-- JOIN dukcapil + bpjs: kolom bpjs salah -->
+  <!-- EXPECT code=C4 view=v_mc4_join_bpjs suggestion=no_ktp -->
+  <model name="vm_mc4_join_bpjs" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc4_join_bpjs AS
+        SELECT d.no_ktp, bj.kelas_layanan
+        FROM dukcapil_db.penduduk d
+        JOIN bpjs_db.peserta bj ON d.no_ktp = bj.no_ktpp;
+    ]]></metadata>
+  </model>
+
+  <!-- JOIN 3 tabel, satu kolom join salah di tabel tengah -->
+  <!-- EXPECT code=C4 view=v_mc4_join_three suggestion=no_ktp_kepala -->
+  <model name="vm_mc4_join_three" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc4_join_three AS
+        SELECT d.no_ktp, t.status_kemiskinan, bj.kelas_layanan
+        FROM dukcapil_db.penduduk ds
+        LEFT JOIN dtks_db.keluarga_penerima_manfaat t  ON ds.no_ktp = t.no_ktpp_kepala
+        LEFT JOIN bpjs_db.peserta                   bj ON ds.no_ktp = bj.no_ktp;
+    ]]></metadata>
+  </model>
+
+
+  <!-- POSITIVE CASES -->
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_bansos -->
+  <model name="vm_mc_ok_bansos" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_bansos AS
+        SELECT nik, nama, tanggal_lahir, pekerjaan, penghasilan
+        FROM bansos_db.master_penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_dukcapil -->
+  <model name="vm_mc_ok_dukcapil" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_dukcapil AS
+        SELECT no_ktp, nama_lengkap, tgl_lahir, jenis_kelamin,
+               agama, status_perkawinan, pendidikan_terakhir
+        FROM dukcapil_db.penduduk;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_dtks -->
+  <model name="vm_mc_ok_dtks" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_dtks AS
+        SELECT kpm_id, no_ktp_kepala, no_kk,
+               desil_kesejahteraan, status_kemiskinan, sumber_data
+        FROM dtks_db.keluarga_penerima_manfaat;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_bpjs -->
+  <model name="vm_mc_ok_bpjs" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_bpjs AS
+        SELECT peserta_id, no_ktp, nama_peserta,
+               kelas_layanan, jenis_kepesertaan, status_aktif
+        FROM bpjs_db.peserta;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_join_db_bansos (cross-source join) -->
+  <model name="vm_mc_ok_join" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_join AS
+        SELECT d.no_ktp, d.nama_lengkap, d.tgl_lahir,
+               b.penghasilan, b.status_hidup
+        FROM dukcapil_db.penduduk d
+        JOIN bansos_db.master_penduduk b ON d.no_ktp = b.nik;
+    ]]></metadata>
+  </model>
+
+  <!-- EXPECT_POSITIVE view=v_mc_ok_terpadu (4-way join) -->
+  <model name="vm_mc_ok_terpadu" type="VIRTUAL">
+    <metadata type="DDL"><![CDATA[
+      CREATE VIEW v_mc_ok_terpadu AS
+        SELECT d.no_ktp, d.nama_lengkap,
+               t.status_kemiskinan, t.desil_kesejahteraan,
+               bj.kelas_layanan, bj.jenis_kepesertaan
+        FROM dukcapil_db.penduduk d
+        LEFT JOIN dtks_db.keluarga_penerima_manfaat t  ON d.no_ktp = t.no_ktp_kepala
+        LEFT JOIN bpjs_db.peserta                   bj ON d.no_ktp = bj.no_ktp;
+    ]]></metadata>
+  </model>
+
+</vdb>

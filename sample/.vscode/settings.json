@@ -1,11 +1,32 @@
 {
 	"obdf-lens.connections": {
 		"bansos_db": {
+			"dialect": "postgresql",
 			"host": "localhost",
-			"port": 5432,
-			"database": "obdf",
+			"port": 5432322,
+			"database": "bansos",
 			"user": "postgres",
 			"password": "postgres"
+		},
+		"dukcapil_db": {
+			"dialect": "postgresql",
+			"host": "localhost",
+			"port": 5432,
+			"database": "dukcapil",
+			"user": "postgres",
+			"password": "postgres"
+		},
+		"dtks_db": {
+			"dialect": "sqlite",
+			"filename": "/Users/faza/Documents/Productive/kuliah/obdaext/obdf-lens/sample/db/dtks.db"
+		},
+		"bpjs_db": {
+			"dialect": "mysql",
+			"host": "localhost",
+			"port": 3306,
+			"database": "bpjs_kes",
+			"user": "root",
+			"password": ""
 		}
 	}
 }
